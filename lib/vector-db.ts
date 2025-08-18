@@ -1,25 +1,25 @@
 import { Index } from '@upstash/vector';
-import { FoodItem, SearchResult, VectorData } from '@/types/food';
+import { FoodItem, SearchResult, VectorData } from '../types/food';
 
-// Initialize Upstash Vector client
+// Initialize Upstash Vector client with hardcoded values (temporary fix)
 const index = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL!,
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
+  url: "https://exotic-pegasus-20433-us1-vector.upstash.io",
+  token: "ABgFMGV4b3RpYy1wZWdhc3VzLTIwNDMzLXVzMWFkbWluWm1ZeVpqRmpOV010TXpJMFl5MDBPR1k0TFdJMk56QXROakk1TjJNMU9EZGhNR1Ez",
 });
 
 // Simple text embedding function (using character frequencies)
-// In production, you'd use OpenAI's text-embedding-ada-002 or similar
+// Updated to use 1024 dimensions to match Upstash database configuration
 function createSimpleEmbedding(text: string): number[] {
-  const vector = new Array(1536).fill(0);
+  const vector = new Array(1024).fill(0);
   const words = text.toLowerCase().split(/\s+/);
   
   // Create a simple embedding based on word characteristics
   words.forEach((word, index) => {
     const wordHash = word.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const position = wordHash % 1536;
+    const position = wordHash % 1024;
     vector[position] += 1 / (index + 1); // Weighted by position
     
-    // Add some semantic features
+    // Add some semantic features (adjusted positions for 1024 dimensions)
     if (word.includes('spicy') || word.includes('hot')) vector[100] += 2;
     if (word.includes('sweet')) vector[200] += 2;
     if (word.includes('sour')) vector[300] += 2;
@@ -29,7 +29,7 @@ function createSimpleEmbedding(text: string): number[] {
     if (word.includes('vegetable')) vector[700] += 2;
     if (word.includes('curry')) vector[800] += 2;
     if (word.includes('soup')) vector[900] += 2;
-    if (word.includes('noodle')) vector[1000] += 2;
+    if (word.includes('noodle')) vector[950] += 2; // Adjusted to fit within 1024
   });
   
   // Normalize vector
@@ -80,9 +80,9 @@ export async function searchSimilarFoods(query: string, topK: number = 5): Promi
       includeMetadata: true,
     });
 
-    // Transform results
+    // Transform results - Fix the type issue by ensuring string id
     const searchResults: SearchResult[] = results.map(result => ({
-      id: result.id,
+      id: String(result.id), // Convert to string to match SearchResult interface
       text: result.metadata?.text as string,
       region: result.metadata?.region as string,
       type: result.metadata?.type as string,

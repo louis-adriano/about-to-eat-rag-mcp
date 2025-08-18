@@ -1,4 +1,4 @@
-import { FoodSearch } from '@/components/food-search';
+import { FoodSearch } from '../components/food-search';
 import { Search, Globe, Utensils } from 'lucide-react';
 
 export default function Home() {
@@ -16,7 +16,7 @@ export default function Home() {
             </div>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
               Discover delicious foods from around the world using AI-powered semantic search. 
-              Describe what you're craving and we'll find the perfect match!
+              Describe what you&apos;re craving and we&apos;ll find the perfect match!
             </p>
           </div>
         </div>
@@ -36,7 +36,7 @@ export default function Home() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Smart Search</h3>
             <p className="text-gray-600 text-sm">
-              Describe flavors, ingredients, or cooking methods and we'll find matching dishes using AI.
+              Describe flavors, ingredients, or cooking methods and we&apos;ll find matching dishes using AI.
             </p>
           </div>
           

@@ -1,7 +1,7 @@
 'use client';
 
-import { SearchResult } from '@/types/food';
-import { formatScore, getScoreColor } from '@/lib/utils';
+import { SearchResult } from '../types/food';
+import { formatScore, getScoreColor } from '../lib/utils';
 import { MapPin, Utensils } from 'lucide-react';
 
 interface FoodCardProps {

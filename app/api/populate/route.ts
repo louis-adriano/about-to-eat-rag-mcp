@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { populateVectorDB } from '@/lib/vector-db';
-import { FOOD_DATA } from '@/lib/food-data';
+import { populateVectorDB } from '../../../lib/vector-db';
+import { FOOD_DATA } from '../../../lib/food-data';
 
 export async function GET() {
   try {

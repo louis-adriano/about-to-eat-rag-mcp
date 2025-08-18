@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Search, Loader2, AlertCircle } from 'lucide-react';
-import { SearchResult } from '@/types/food';
+import { SearchResult } from '../types/food';
 import { FoodCard } from './food-card';
 
 export function FoodSearch() {
@@ -71,7 +71,7 @@ export function FoodSearch() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Describe what you're looking for... (e.g., 'spicy Indian curry with chickpeas')"
+              placeholder="Describe what you&apos;re looking for... (e.g., &apos;spicy Indian curry with chickpeas&apos;)"
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 placeholder-gray-500"
               disabled={loading}
             />

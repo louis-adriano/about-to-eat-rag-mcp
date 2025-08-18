@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchSimilarFoods } from '@/lib/vector-db';
+import { searchSimilarFoods } from '../../../lib/vector-db';
 import { z } from 'zod';
 
 const SearchSchema = z.object({
