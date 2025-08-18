@@ -9,6 +9,10 @@ export interface SearchResult extends FoodItem {
   score: number;
 }
 
+export interface SearchResultWithVector extends SearchResult {
+  vectorScore: number;
+}
+
 export interface VectorData {
   id: string;
   vector: number[];
