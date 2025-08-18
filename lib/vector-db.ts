@@ -1,10 +1,10 @@
 import { Index } from '@upstash/vector';
 import { FoodItem, SearchResult, SearchResultWithVector, VectorData } from '../types/food';
 
-// Initialize Upstash Vector client
+// Initialize Upstash Vector client with fallback
 const index = new Index({
-  url: process.env.UPSTASH_VECTOR_REST_URL!,
-  token: process.env.UPSTASH_VECTOR_REST_TOKEN!,
+  url: process.env.UPSTASH_VECTOR_REST_URL || '',
+  token: process.env.UPSTASH_VECTOR_REST_TOKEN || '',
 });
 
 // Advanced semantic understanding with cultural and culinary nuances
@@ -197,7 +197,7 @@ const CONTEXTUAL_PHRASES: Record<string, ContextualPhrase> = {
 };
 
 // Advanced embedding with cultural and contextual understanding
-function createAdvancedEmbedding(text: string, includeMetadata: boolean = true): number[] {
+function createAdvancedEmbedding(text: string): number[] {
   const vector = new Array(1024).fill(0);
   const normalizedText = text.toLowerCase();
   let words = normalizedText.split(/\s+/);
@@ -235,7 +235,7 @@ function createAdvancedEmbedding(text: string, includeMetadata: boolean = true):
   });
 
   // Process advanced semantic features
-  Object.entries(ADVANCED_SEMANTIC_MAP).forEach(([category, config]) => {
+  Object.entries(ADVANCED_SEMANTIC_MAP).forEach(([, config]) => {
     if (featureIndex >= 800) return;
     
     let categoryScore = 0;
@@ -250,7 +250,7 @@ function createAdvancedEmbedding(text: string, includeMetadata: boolean = true):
 
     // Check cultural context
     if ('culturalContext' in config) {
-      Object.entries(config.culturalContext).forEach(([culture, terms]) => {
+      Object.entries(config.culturalContext).forEach(([, terms]) => {
         terms.forEach(term => {
           if (normalizedText.includes(term)) {
             categoryScore += 3 * (config.weight || 1); // High boost for cultural matches
@@ -261,7 +261,7 @@ function createAdvancedEmbedding(text: string, includeMetadata: boolean = true):
 
     // Check regional styles for complex cuisines
     if ('regional_styles' in config) {
-      Object.entries(config.regional_styles).forEach(([region, terms]) => {
+      Object.entries(config.regional_styles).forEach(([, terms]) => {
         terms.forEach(term => {
           if (normalizedText.includes(term)) {
             categoryScore += 2.5 * (config.weight || 1);
@@ -588,11 +588,15 @@ function jaroSimilarity(s1: string, s2: string): number {
 
 export async function populateVectorDB(foodItems: FoodItem[]): Promise<void> {
   try {
+    if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
+      throw new Error('Upstash environment variables not configured');
+    }
+
     console.log('Populating vector database with advanced semantic embeddings...');
     
     const vectors: VectorData[] = foodItems.map(item => ({
       id: item.id,
-      vector: createAdvancedEmbedding(`${item.text} ${item.region} ${item.type}`, true),
+      vector: createAdvancedEmbedding(`${item.text} ${item.region} ${item.type}`),
       metadata: {
         text: item.text,
         region: item.region,
@@ -616,10 +620,14 @@ export async function populateVectorDB(foodItems: FoodItem[]): Promise<void> {
 
 export async function searchSimilarFoods(query: string, topK: number = 5): Promise<SearchResult[]> {
   try {
+    if (!process.env.UPSTASH_VECTOR_REST_URL || !process.env.UPSTASH_VECTOR_REST_TOKEN) {
+      throw new Error('Upstash environment variables not configured');
+    }
+
     console.log('Performing advanced semantic search for:', query);
     
     // Create advanced embedding for the query
-    const queryVector = createAdvancedEmbedding(query, true);
+    const queryVector = createAdvancedEmbedding(query);
     
     // Search with larger result set for re-ranking
     const searchTopK = Math.min(topK * 4, 100);
