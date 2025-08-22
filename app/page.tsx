@@ -83,7 +83,7 @@ export default function Home() {
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">Smart Search</h3>
               <p className="text-gray-600 leading-relaxed">
-                Describe flavors, ingredients, or cooking methods and our AI will understand exactly what you're looking for.
+                Describe flavors, ingredients, or cooking methods and our AI will understand exactly what you&apos;re looking for.
               </p>
             </div>
             
