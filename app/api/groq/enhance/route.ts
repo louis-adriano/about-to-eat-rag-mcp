@@ -8,6 +8,14 @@ const EnhanceSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Groq API key is available
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'dummy-key-for-build') {
+      return NextResponse.json(
+        { success: false, error: 'Groq API key not configured' },
+        { status: 503 }
+      );
+    }
+
     const body = await request.json();
     const { query } = EnhanceSchema.parse(body);
 

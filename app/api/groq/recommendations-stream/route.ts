@@ -3,7 +3,7 @@ import Groq from 'groq-sdk';
 import { z } from 'zod';
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || 'dummy-key-for-build',
 });
 
 const RecommendationsSchema = z.object({
@@ -14,6 +14,17 @@ const RecommendationsSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Groq API key is available
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'dummy-key-for-build') {
+      return new Response(
+        JSON.stringify({ error: 'Groq API key not configured' }),
+        { 
+          status: 503, 
+          headers: { 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const body = await request.json();
     const { query, searchResults, preferences } = RecommendationsSchema.parse(body);
 

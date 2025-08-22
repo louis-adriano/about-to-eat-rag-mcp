@@ -1,8 +1,9 @@
 // lib/groq.ts
 import Groq from 'groq-sdk';
 
+// Initialize Groq client with fallback for build time
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || 'dummy-key-for-build',
 });
 
 export interface QueryEnhancement {
@@ -31,9 +32,27 @@ interface SearchResult {
 export class GroqFoodService {
   
   /**
+   * Check if Groq API key is available
+   */
+  private static isApiKeyAvailable(): boolean {
+    return !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'dummy-key-for-build');
+  }
+
+  /**
    * Enhance user query with LLM intelligence (non-streaming for structured data)
    */
   static async enhanceQuery(userQuery: string): Promise<QueryEnhancement> {
+    if (!this.isApiKeyAvailable()) {
+      return {
+        enhancedQuery: userQuery,
+        searchTerms: userQuery.split(' '),
+        cuisine: null,
+        cookingMethod: null,
+        ingredients: [],
+        confidence: 0.5
+      };
+    }
+
     try {
       const completion = await groq.chat.completions.create({
         messages: [
@@ -87,6 +106,10 @@ export class GroqFoodService {
     searchResults: SearchResult[], 
     userPreferences?: string[]
   ): Promise<FoodRecommendation[]> {
+    if (!this.isApiKeyAvailable()) {
+      return [];
+    }
+
     try {
       const resultsSummary = searchResults.slice(0, 3).map(r => 
         `${r.region} ${r.type}: ${r.text.substring(0, 100)}...`
@@ -140,6 +163,19 @@ export class GroqFoodService {
    * Create streaming food context (NEW STREAMING METHOD!)
    */
   static async createStreamingFoodContext(foodItem: SearchResult): Promise<ReadableStream> {
+    if (!this.isApiKeyAvailable()) {
+      const encoder = new TextEncoder();
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+            content: 'Groq API is not available. Please check your API key configuration.' 
+          })}\n\n`));
+          controller.enqueue(encoder.encode('data: {"done": true}\n\n'));
+          controller.close();
+        },
+      });
+    }
+
     try {
       const stream = await groq.chat.completions.create({
         messages: [
@@ -195,7 +231,7 @@ export class GroqFoodService {
    * Smart query suggestions (non-streaming for quick responses)
    */
   static async generateQuerySuggestions(partialQuery: string): Promise<string[]> {
-    if (partialQuery.length < 3) return [];
+    if (partialQuery.length < 3 || !this.isApiKeyAvailable()) return [];
 
     try {
       const completion = await groq.chat.completions.create({

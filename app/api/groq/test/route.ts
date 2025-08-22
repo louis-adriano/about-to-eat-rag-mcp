@@ -3,11 +3,21 @@ import { NextResponse } from 'next/server';
 import Groq from 'groq-sdk';
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || 'dummy-key-for-build',
 });
 
 export async function GET() {
   try {
+    // Check if Groq API key is available
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'dummy-key-for-build') {
+      return NextResponse.json({
+        success: false,
+        message: "Groq API key not configured",
+        error: "GROQ_API_KEY environment variable is missing",
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // Test Groq connection with a simple food-related query
     const completion = await groq.chat.completions.create({
       messages: [

@@ -12,6 +12,17 @@ const ContextSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Groq API key is available
+    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'dummy-key-for-build') {
+      return new Response(
+        JSON.stringify({ error: 'Groq API key not configured' }),
+        { 
+          status: 503, 
+          headers: { 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const body = await request.json();
     const { foodItem } = ContextSchema.parse(body);
 
