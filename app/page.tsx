@@ -37,7 +37,7 @@ export default function Home() {
             
             <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed mb-8">
               Discover amazing dishes from around the world using our smart AI search. 
-              Just describe what you're craving and we'll find the perfect match from our global food database!
+              Just describe what you&apos;re craving and we&apos;ll find the perfect match from our global food database!
             </p>
             
             {/* Quick stats */}
