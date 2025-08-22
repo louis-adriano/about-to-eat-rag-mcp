@@ -68,7 +68,7 @@ export function FoodSearch() {
   const handleSearch = async (e: React.FormEvent, searchQuery?: string, useEnhanced = false) => {
     e.preventDefault();
     
-    let queryToSearch = searchQuery || query.trim();
+    const queryToSearch = searchQuery || query.trim();
     
     if (!queryToSearch) {
       setError('Please enter a search query');
@@ -296,7 +296,7 @@ export function FoodSearch() {
                 {Math.round(enhancement.confidence * 100)}% confidence
               </span>
             </div>
-            <p className="text-sm text-purple-700 mb-2">"{enhancement.enhancedQuery}"</p>
+            <p className="text-sm text-purple-700 mb-2">&ldquo;{enhancement.enhancedQuery}&rdquo;</p>
             <div className="flex flex-wrap gap-2 text-xs">
               {enhancement.cuisine && (
                 <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">Cuisine: {enhancement.cuisine}</span>
@@ -390,7 +390,7 @@ export function FoodSearch() {
               Search Results
               {results.length > 0 && (
                 <span className="text-gray-500 font-normal ml-2">
-                  ({results.length} found for &quot;{lastQuery}&quot;)
+                  ({results.length} found for &ldquo;{lastQuery}&rdquo;)
                 </span>
               )}
             </h2>
@@ -421,7 +421,7 @@ export function FoodSearch() {
                 </h3>
                 
                 <p className="text-gray-600 mb-4 leading-relaxed">
-                  We couldn&apos;t find any dishes matching <strong>&quot;{lastQuery}&quot;</strong>. 
+                  We couldn&apos;t find any dishes matching <strong>&ldquo;{lastQuery}&rdquo;</strong>. 
                   Try the AI-powered search for better results!
                 </p>
                 
@@ -437,10 +437,10 @@ export function FoodSearch() {
                 <div className="bg-blue-50 rounded-lg p-4 mb-4">
                   <p className="text-sm text-blue-800 font-medium mb-2">💡 Search Tips:</p>
                   <ul className="text-sm text-blue-700 text-left space-y-1">
-                    <li>• Try broader terms (e.g., &quot;Korean vegetables&quot; instead of &quot;Korean fermented cabbage&quot;)</li>
-                    <li>• Use cuisine names (e.g., &quot;Thai&quot;, &quot;Chinese&quot;, &quot;Japanese&quot;)</li>
-                    <li>• Describe cooking methods (e.g., &quot;fried&quot;, &quot;grilled&quot;, &quot;steamed&quot;)</li>
-                    <li>• Search by main ingredients (e.g., &quot;rice&quot;, &quot;noodles&quot;, &quot;chicken&quot;)</li>
+                    <li>• Try broader terms (e.g., &ldquo;Korean vegetables&rdquo; instead of &ldquo;Korean fermented cabbage&rdquo;)</li>
+                    <li>• Use cuisine names (e.g., &ldquo;Thai&rdquo;, &ldquo;Chinese&rdquo;, &ldquo;Japanese&rdquo;)</li>
+                    <li>• Describe cooking methods (e.g., &ldquo;fried&rdquo;, &ldquo;grilled&rdquo;, &ldquo;steamed&rdquo;)</li>
+                    <li>• Search by main ingredients (e.g., &ldquo;rice&rdquo;, &ldquo;noodles&rdquo;, &ldquo;chicken&rdquo;)</li>
                   </ul>
                 </div>
               </div>

@@ -22,6 +22,12 @@ export interface FoodRecommendation {
   searchTerms: string[];
 }
 
+interface SearchResult {
+  region: string;
+  type: string;
+  text: string;
+}
+
 export class GroqFoodService {
   
   /**
@@ -78,7 +84,7 @@ export class GroqFoodService {
    */
   static async generateRecommendations(
     userQuery: string, 
-    searchResults: any[], 
+    searchResults: SearchResult[], 
     userPreferences?: string[]
   ): Promise<FoodRecommendation[]> {
     try {
@@ -133,7 +139,7 @@ export class GroqFoodService {
   /**
    * Create streaming food context (NEW STREAMING METHOD!)
    */
-  static async createStreamingFoodContext(foodItem: any): Promise<ReadableStream> {
+  static async createStreamingFoodContext(foodItem: SearchResult): Promise<ReadableStream> {
     try {
       const stream = await groq.chat.completions.create({
         messages: [

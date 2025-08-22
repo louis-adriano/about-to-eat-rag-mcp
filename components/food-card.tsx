@@ -4,14 +4,16 @@ import { useState, useRef } from 'react';
 import { formatScore, getScoreColor } from '../lib/utils';
 import { MapPin, Utensils, Loader2, Sparkles, X, StopCircle } from 'lucide-react';
 
+interface FoodItem {
+  id: string;
+  text: string;
+  region: string;
+  type: string;
+  score: number;
+}
+
 interface FoodCardProps {
-  food: {
-    id: string;
-    text: string;
-    region: string;
-    type: string;
-    score: number;
-  };
+  food: FoodItem;
   rank: number;
 }
 
@@ -114,8 +116,8 @@ export function FoodCard({ food, rank }: FoodCardProps) {
         }
       }
 
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('Stream aborted by user');
       } else {
         console.error('Streaming error:', error);

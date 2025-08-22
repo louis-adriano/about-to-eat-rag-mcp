@@ -1,7 +1,6 @@
-
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type * as FoodTypes from '../types/food';
+import type { SearchResult } from '../types/food';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -52,7 +51,7 @@ export function truncateText(text: string, maxLength: number = 150): string {
 }
 
 // Helper function to validate search results
-export function validateSearchResult(result: unknown): result is FoodTypes.SearchResult {
+export function validateSearchResult(result: unknown): result is SearchResult {
   return (
     result != null &&
     typeof result === 'object' &&
@@ -69,6 +68,3 @@ export function validateSearchResult(result: unknown): result is FoodTypes.Searc
     !isNaN((result as Record<string, unknown>).score as number)
   );
 }
-
-// Import the SearchResult type
-import { SearchResult } from '../types/food';
