@@ -13,10 +13,14 @@ export function FoodSearch() {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
 
-  const handleSearch = async (e: React.FormEvent) => {
+  // Updated handleSearch to accept an optional query parameter
+  const handleSearch = async (e: React.FormEvent, searchQuery?: string) => {
     e.preventDefault();
     
-    if (!query.trim()) {
+    // Use the provided searchQuery or fall back to the current query state
+    const queryToSearch = searchQuery || query.trim();
+    
+    if (!queryToSearch) {
       setError('Please enter a search query');
       return;
     }
@@ -24,7 +28,7 @@ export function FoodSearch() {
     setLoading(true);
     setError(null);
     setSearchPerformed(true);
-    setLastQuery(query.trim());
+    setLastQuery(queryToSearch);
 
     try {
       const response = await fetch('/api/search', {
@@ -33,7 +37,7 @@ export function FoodSearch() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: query.trim(),
+          query: queryToSearch,
           limit: 8
         }),
       });
@@ -64,21 +68,19 @@ export function FoodSearch() {
     'Indian curry with chickpeas'
   ];
 
+  // Fixed handleSampleClick to pass the sample directly to handleSearch
   const handleSampleClick = (sample: string) => {
     setQuery(sample);
-    // Auto-search when clicking a sample
+    // Create a fake event and pass the sample query directly
     const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-    setQuery(sample);
-    setTimeout(() => {
-      handleSearch(fakeEvent);
-    }, 100);
+    handleSearch(fakeEvent, sample);
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
       {/* Search Form */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <form onSubmit={handleSearch} className="space-y-4">
+        <form onSubmit={(e) => handleSearch(e)} className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
