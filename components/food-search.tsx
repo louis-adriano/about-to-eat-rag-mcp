@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, Loader2, AlertCircle, ChefHat, Utensils, Sparkles, Brain, Lightbulb } from 'lucide-react';
+import { Search, Loader2, AlertCircle, ChefHat, Utensils, Sparkles, Brain, Lightbulb, Zap } from 'lucide-react';
 import { SearchResult } from '../types/food';
 import { FoodCard } from './food-card';
 
@@ -14,7 +14,10 @@ interface QueryEnhancement {
   confidence: number;
 }
 
+type SearchMode = 'vector' | 'ai';
+
 export function FoodSearch() {
+  const [searchMode, setSearchMode] = useState<SearchMode>('vector');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,7 +25,7 @@ export function FoodSearch() {
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [lastQuery, setLastQuery] = useState('');
   
-  // Streaming AI features only
+  // AI Search specific states
   const [enhancement, setEnhancement] = useState<QueryEnhancement | null>(null);
   const [recommendationsText, setRecommendationsText] = useState<string>('');
   const [streamingRecommendations, setStreamingRecommendations] = useState(false);
@@ -30,9 +33,9 @@ export function FoodSearch() {
   const [enhancingQuery, setEnhancingQuery] = useState(false);
   const [showEnhanced, setShowEnhanced] = useState(false);
 
-  // Real-time search suggestions
+  // Real-time search suggestions (only for AI mode)
   const getSuggestions = useCallback(async (partialQuery: string) => {
-    if (partialQuery.length < 3) {
+    if (partialQuery.length < 3 || searchMode !== 'ai') {
       setSuggestions([]);
       return;
     }
@@ -51,21 +54,31 @@ export function FoodSearch() {
     } catch (error) {
       console.error('Suggestions error:', error);
     }
-  }, []);
+  }, [searchMode]);
 
   // Debounce suggestions
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query && !searchPerformed) {
+      if (query && !searchPerformed && searchMode === 'ai') {
         getSuggestions(query);
       }
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [query, searchPerformed, getSuggestions]);
+  }, [query, searchPerformed, searchMode, getSuggestions]);
 
-  // Main search function with optional AI enhancement
-  const handleSearch = async (e: React.FormEvent, searchQuery?: string, useEnhanced = false) => {
+  // Clear AI-specific states when switching to vector mode
+  useEffect(() => {
+    if (searchMode === 'vector') {
+      setSuggestions([]);
+      setEnhancement(null);
+      setRecommendationsText('');
+      setShowEnhanced(false);
+    }
+  }, [searchMode]);
+
+  // Main search function
+  const handleSearch = async (e: React.FormEvent, searchQuery?: string) => {
     e.preventDefault();
     
     const queryToSearch = searchQuery || query.trim();
@@ -82,11 +95,14 @@ export function FoodSearch() {
     setSuggestions([]);
     setRecommendationsText('');
     setStreamingRecommendations(false);
+    setEnhancement(null);
+    setShowEnhanced(false);
 
     try {
-      // Step 1: Optionally enhance query with AI
       let finalQuery = queryToSearch;
-      if (useEnhanced && !searchQuery) {
+      
+      // Step 1: AI Enhancement (only for AI search mode)
+      if (searchMode === 'ai' && !searchQuery) {
         setEnhancingQuery(true);
         try {
           const enhanceResponse = await fetch('/api/groq/enhance', {
@@ -108,7 +124,7 @@ export function FoodSearch() {
         }
       }
 
-      // Step 2: Perform vector search
+      // Step 2: Vector search (both modes use this)
       const response = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,8 +143,8 @@ export function FoodSearch() {
       const searchResults = data.results || [];
       setResults(searchResults);
 
-      // Step 3: Stream AI recommendations if we have results
-      if (searchResults.length > 0) {
+      // Step 3: AI Recommendations (only for AI search mode)
+      if (searchMode === 'ai' && searchResults.length > 0) {
         setStreamingRecommendations(true);
         setRecommendationsText('');
         
@@ -211,22 +227,79 @@ export function FoodSearch() {
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
-      {/* Search Form */}
+      {/* Search Mode Tabs */}
       <div className="bg-white rounded-lg shadow-md p-6">
-        <form onSubmit={(e) => handleSearch(e)} className="space-y-4">
+        <div className="flex items-center justify-center mb-6">
+          <div className="bg-gray-100 p-1 rounded-lg flex">
+            <button
+              onClick={() => setSearchMode('vector')}
+              className={`px-6 py-3 rounded-md font-medium transition-all duration-200 flex items-center gap-2 ${
+                searchMode === 'vector'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Zap className="w-4 h-4" />
+              Vector Search
+            </button>
+            <button
+              onClick={() => setSearchMode('ai')}
+              className={`px-6 py-3 rounded-md font-medium transition-all duration-200 flex items-center gap-2 ${
+                searchMode === 'ai'
+                  ? 'bg-white text-purple-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Brain className="w-4 h-4" />
+              AI Search
+            </button>
+          </div>
+        </div>
+
+        {/* Mode Description */}
+        <div className="text-center mb-6">
+          {searchMode === 'vector' ? (
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Zap className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-blue-900">Vector Search</h3>
+              </div>
+              <p className="text-blue-700 text-sm">
+                Fast semantic search using vector embeddings. Finds foods based on meaning and similarity.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-purple-50 rounded-lg p-4">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Brain className="w-5 h-5 text-purple-600" />
+                <h3 className="font-semibold text-purple-900">AI Search</h3>
+              </div>
+              <p className="text-purple-700 text-sm">
+                Enhanced with AI query understanding, real-time suggestions, and personalized recommendations.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Search Form */}
+        <form onSubmit={handleSearch} className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Describe what you're looking for... (e.g., 'Korean fermented vegetables', 'spicy Thai soup')"
+              placeholder={
+                searchMode === 'vector'
+                  ? "Describe what you're looking for... (e.g., 'Korean fermented vegetables')"
+                  : "Describe what you're craving... (AI will enhance your query)"
+              }
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 placeholder-gray-500"
               disabled={loading}
             />
             
-            {/* AI Suggestions Dropdown */}
-            {suggestions.length > 0 && (
+            {/* AI Suggestions Dropdown (only for AI mode) */}
+            {searchMode === 'ai' && suggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg z-50 max-h-60 overflow-y-auto">
                 <div className="p-2 text-xs text-gray-500 border-b flex items-center gap-1">
                   <Sparkles className="w-3 h-3" />
@@ -250,44 +323,29 @@ export function FoodSearch() {
             <button
               type="submit"
               disabled={loading || !query.trim()}
-              className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium transition-colors"
+              className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                searchMode === 'vector'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
+                  : 'bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50'
+              } disabled:cursor-not-allowed`}
             >
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  Searching...
+                  {enhancingQuery ? 'Enhancing...' : 'Searching...'}
                 </>
               ) : (
                 <>
                   <Search className="w-5 h-5" />
-                  Search Foods
-                </>
-              )}
-            </button>
-            
-            <button
-              type="button"
-              onClick={(e) => handleSearch(e, undefined, true)}
-              disabled={loading || !query.trim()}
-              className="bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium transition-colors"
-            >
-              {enhancingQuery ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  AI Search
-                </>
-              ) : (
-                <>
-                  <Brain className="w-5 h-5" />
-                  AI Search
+                  {searchMode === 'vector' ? 'Vector Search' : 'AI Search'}
                 </>
               )}
             </button>
           </div>
         </form>
 
-        {/* Query Enhancement Display */}
-        {showEnhanced && enhancement && (
+        {/* Query Enhancement Display (AI mode only) */}
+        {searchMode === 'ai' && showEnhanced && enhancement && (
           <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
             <div className="flex items-center gap-2 mb-2">
               <Brain className="w-4 h-4 text-purple-600" />
@@ -342,8 +400,8 @@ export function FoodSearch() {
         </div>
       )}
 
-      {/* Streaming AI Recommendations */}
-      {(recommendationsText || streamingRecommendations) && (
+      {/* AI Recommendations (AI mode only) */}
+      {searchMode === 'ai' && (recommendationsText || streamingRecommendations) && (
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
           <div className="flex items-center gap-2 mb-4">
             <Lightbulb className="w-5 h-5 text-purple-600" />
@@ -390,7 +448,7 @@ export function FoodSearch() {
               Search Results
               {results.length > 0 && (
                 <span className="text-gray-500 font-normal ml-2">
-                  ({results.length} found for &ldquo;{lastQuery}&rdquo;)
+                  ({results.length} found {searchMode === 'ai' ? 'with AI' : 'with vector search'} for &ldquo;{lastQuery}&rdquo;)
                 </span>
               )}
             </h2>
@@ -421,20 +479,21 @@ export function FoodSearch() {
                 </h3>
                 
                 <p className="text-gray-600 mb-4 leading-relaxed">
-                  We couldn&apos;t find any dishes matching <strong>&ldquo;{lastQuery}&rdquo;</strong>. 
-                  Try the AI-powered search for better results!
+                  We couldn&apos;t find any dishes matching <strong>&ldquo;{lastQuery}&rdquo;</strong>
+                  {searchMode === 'vector' && '. Try the AI Search for enhanced results!'}
                 </p>
                 
-                <button
-                  onClick={(e) => handleSearch(e, lastQuery, true)}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium mb-4"
-                >
-                  <Brain className="w-4 h-4" />
-                  Try AI Search
-                </button>
+                {searchMode === 'vector' && (
+                  <button
+                    onClick={() => setSearchMode('ai')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium mb-4"
+                  >
+                    <Brain className="w-4 h-4" />
+                    Try AI Search
+                  </button>
+                )}
                 
-                <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                <div className="bg-blue-50 rounded-lg p-4">
                   <p className="text-sm text-blue-800 font-medium mb-2">💡 Search Tips:</p>
                   <ul className="text-sm text-blue-700 text-left space-y-1">
                     <li>• Try broader terms (e.g., &ldquo;Korean vegetables&rdquo; instead of &ldquo;Korean fermented cabbage&rdquo;)</li>
