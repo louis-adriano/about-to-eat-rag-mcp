@@ -3,7 +3,7 @@ import { Search, Globe, Utensils, Sparkles, ChefHat, Heart } from 'lucide-react'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
+    <main className="min-h-screen">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background decoration */}
