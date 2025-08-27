@@ -311,7 +311,7 @@ export default function AboutPage() {
                 Connect on LinkedIn
               </a>
               <a
-                href="https://github.com/louisadriano/about-to-eat"
+                href="https://github.com/louis-adriano/about-to-eat-rag-mcp"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium"

@@ -55,7 +55,7 @@ export function Navbar() {
 
             {/* GitHub Link */}
             <a
-              href="https://github.com/louisadriano/about-to-eat"
+              href="https://github.com/louis-adriano/about-to-eat-rag-mcp"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all duration-200"
