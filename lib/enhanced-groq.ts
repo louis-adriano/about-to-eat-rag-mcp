@@ -50,7 +50,7 @@ export class EnhancedGroqService {
       // First, get query translation for vector search
       const translationPromise = this.translateQueryForVectorSearch(userQuery);
 
-      // Start streaming analysis
+      // Start streaming analysis - Updated to use supported model
       const stream = await groq.chat.completions.create({
         messages: [
           {
@@ -74,7 +74,7 @@ export class EnhancedGroqService {
             content: `I'm craving: "${userQuery}". Help me understand what I'm looking for and provide insights about these types of foods.`
           }
         ],
-        model: "llama-3.1-70b-versatile", // Use more powerful model for analysis
+        model: "llama3-70b-8192", // Updated to supported model
         temperature: 0.7,
         max_tokens: 400,
         stream: true,
@@ -212,7 +212,7 @@ export class EnhancedGroqService {
             content: `Translate this food query for vector database search: "${userQuery}"`
           }
         ],
-        model: "llama-3.1-8b-instant", // Use faster model for translation
+        model: "llama3-8b-8192", // Updated to supported model
         temperature: 0.3,
         max_tokens: 300,
         response_format: { type: "json_object" }
@@ -271,7 +271,7 @@ export class EnhancedGroqService {
             content: `Complete or enhance this food search: "${partialQuery}"`
           }
         ],
-        model: "llama-3.1-8b-instant",
+        model: "llama3-8b-8192", // Updated to supported model
         temperature: 0.8,
         max_tokens: 200,
         response_format: { type: "json_object" }
