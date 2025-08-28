@@ -1,21 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Loader2, AlertCircle, Sparkles, Brain, ChefHat, Utensils } from 'lucide-react';
+import { Search, Loader2, AlertCircle, Sparkles, Brain, ChefHat, Utensils, Lightbulb, XCircle } from 'lucide-react';
 import { SearchResult } from '../types/food';
 import { FoodCard } from './food-card';
 
-interface AIResponse {
-  answer: string;
-  translatedQuery: string;
-  confidence: number;
-  keyTerms: string[];
-}
-
 interface UnifiedSearchResults {
-  aiResponse: AIResponse;
   vectorResults: SearchResult[];
   originalQuery: string;
+  translatedQuery?: string;
+  top3Results?: SearchResult[];
+  hasMatches: boolean;
 }
 
 export function UnifiedFoodSearch() {
@@ -24,8 +19,14 @@ export function UnifiedFoodSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchPerformed, setSearchPerformed] = useState(false);
-  const [streamingAI, setStreamingAI] = useState(false);
-  const [aiContent, setAiContent] = useState('');
+  
+  // Streaming states
+  const [streamingAnalysis, setStreamingAnalysis] = useState(false);
+  const [streamingSummary, setStreamingSummary] = useState(false);
+  const [analysisContent, setAnalysisContent] = useState('');
+  const [summaryContent, setSummaryContent] = useState('');
+  const [noResultsContent, setNoResultsContent] = useState('');
+  const [streamingNoResults, setStreamingNoResults] = useState(false);
 
   const handleSearch = async (e: React.FormEvent, searchQuery?: string) => {
     e.preventDefault();
@@ -41,11 +42,15 @@ export function UnifiedFoodSearch() {
     setError(null);
     setSearchPerformed(true);
     setResults(null);
-    setAiContent('');
-    setStreamingAI(true);
+    setAnalysisContent('');
+    setSummaryContent('');
+    setNoResultsContent('');
+    setStreamingAnalysis(true);
+    setStreamingSummary(false);
+    setStreamingNoResults(false);
 
     try {
-      // Start the unified search
+      // Start the enhanced unified search
       const response = await fetch('/api/unified-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -79,12 +84,25 @@ export function UnifiedFoodSearch() {
             try {
               const data = JSON.parse(line.slice(6));
               
-              if (data.type === 'ai_content') {
-                setAiContent(prev => prev + data.content);
+              if (data.type === 'analysis') {
+                setAnalysisContent(data.content);
+                setStreamingAnalysis(false);
+                setStreamingSummary(true);
+              } else if (data.type === 'ai_summary') {
+                setSummaryContent(prev => prev + data.content);
+              } else if (data.type === 'ai_no_results') {
+                setStreamingAnalysis(false);
+                setStreamingSummary(false);
+                setStreamingNoResults(true);
+                setNoResultsContent(prev => prev + data.content);
               } else if (data.type === 'search_results') {
                 searchResults = data.results;
+                setStreamingSummary(false);
+                setStreamingNoResults(false);
               } else if (data.type === 'done') {
-                setStreamingAI(false);
+                setStreamingAnalysis(false);
+                setStreamingSummary(false);
+                setStreamingNoResults(false);
                 if (searchResults) {
                   setResults(searchResults);
                 }
@@ -100,7 +118,9 @@ export function UnifiedFoodSearch() {
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-      setStreamingAI(false);
+      setStreamingAnalysis(false);
+      setStreamingSummary(false);
+      setStreamingNoResults(false);
     } finally {
       setLoading(false);
     }
@@ -140,7 +160,7 @@ export function UnifiedFoodSearch() {
           AI-Powered Food Discovery
         </h2>
         <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Describe what you&apos;re craving and get intelligent recommendations powered by AI analysis and semantic vector search.
+          Describe what you&apos;re craving and get intelligent recommendations with cultural insights!
         </p>
       </div>
 
@@ -211,70 +231,137 @@ export function UnifiedFoodSearch() {
       {searchPerformed && (
         <div className="space-y-6">
           {/* AI Analysis Section */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Brain className="w-5 h-5 text-purple-600" />
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Lightbulb className="w-5 h-5 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-purple-900">AI Analysis</h3>
-              {streamingAI && (
-                <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full animate-pulse">
+              <h3 className="text-xl font-bold text-blue-900">Understanding Your Craving</h3>
+              {streamingAnalysis && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full animate-pulse">
                   Analyzing...
                 </span>
               )}
             </div>
             
-            <div className="bg-white rounded-lg p-5 border border-purple-100 shadow-sm">
-              {aiContent ? (
-                <div className="space-y-3">
-                  <p className="text-purple-800 leading-relaxed whitespace-pre-wrap text-base">
-                    {aiContent}
-                    {streamingAI && (
-                      <span className="inline-block w-2 h-5 bg-purple-600 ml-1 animate-pulse" />
-                    )}
-                  </p>
-                  
-                  {results?.aiResponse && (
-                    <div className="mt-4 pt-4 border-t border-purple-100">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-purple-700">Translated Query:</span>
-                          <p className="text-purple-600 italic">&quot;{results.aiResponse.translatedQuery}&quot;</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-purple-700">Key Terms:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {results.aiResponse.keyTerms.map((term, idx) => (
-                              <span key={idx} className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                                {term}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-purple-600">
+            <div className="bg-white rounded-lg p-5 border border-blue-100 shadow-sm">
+              {analysisContent ? (
+                <p className="text-blue-800 leading-relaxed text-base">
+                  {analysisContent}
+                </p>
+              ) : streamingAnalysis ? (
+                <div className="flex items-center gap-2 text-blue-600">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Loading AI analysis...</span>
+                  <span>Analyzing your food craving...</span>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Vector Search Results */}
-          {results?.vectorResults && results.vectorResults.length > 0 && (
+          {/* AI Summary with Top 3 (for successful matches) */}
+          {(summaryContent || streamingSummary) && (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Brain className="w-5 h-5 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-purple-900">AI Recommendations</h3>
+                {streamingSummary && (
+                  <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full animate-pulse">
+                    Generating...
+                  </span>
+                )}
+              </div>
+              
+              <div className="bg-white rounded-lg p-5 border border-purple-100 shadow-sm">
+                {summaryContent ? (
+                  <div className="space-y-3">
+                    <div className="text-purple-800 leading-relaxed text-base whitespace-pre-wrap">
+                      {summaryContent}
+                      {streamingSummary && (
+                        <span className="inline-block w-2 h-5 bg-purple-600 ml-1 animate-pulse" />
+                      )}
+                    </div>
+                    
+                    {!streamingSummary && summaryContent && (
+                      <div className="mt-4 pt-3 border-t border-purple-100">
+                        <div className="text-xs text-purple-600 font-medium flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          Powered by Advanced AI Analysis
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-purple-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Generating personalized recommendations...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* AI "No Results" Explanation */}
+          {(noResultsContent || streamingNoResults) && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-orange-100 rounded-lg">
+                  <XCircle className="w-5 h-5 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-bold text-orange-900">Search Results</h3>
+                {streamingNoResults && (
+                  <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full animate-pulse">
+                    Analyzing...
+                  </span>
+                )}
+              </div>
+              
+              <div className="bg-white rounded-lg p-5 border border-orange-100 shadow-sm">
+                {noResultsContent ? (
+                  <div className="space-y-3">
+                    <div className="text-orange-800 leading-relaxed text-base whitespace-pre-wrap">
+                      {noResultsContent}
+                      {streamingNoResults && (
+                        <span className="inline-block w-2 h-5 bg-orange-600 ml-1 animate-pulse" />
+                      )}
+                    </div>
+                    
+                    {!streamingNoResults && noResultsContent && (
+                      <div className="mt-4 pt-3 border-t border-orange-100">
+                        <div className="text-xs text-orange-600 font-medium flex items-center gap-1">
+                          <Brain className="w-3 h-3" />
+                          AI-Powered Search Analysis
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-orange-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Analyzing search results...</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Search Results (only show if we have matches) */}
+          {results?.vectorResults && results.vectorResults.length > 0 && results.hasMatches && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                   <Utensils className="w-6 h-6" />
-                  Food Matches
+                  All Matching Dishes
                   <span className="text-gray-500 font-normal text-lg">
                     ({results.vectorResults.length} found for &quot;{results.originalQuery}&quot;)
                   </span>
                 </h3>
+                {results.translatedQuery && results.translatedQuery !== results.originalQuery && (
+                  <div className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-lg">
+                    Optimized to: &quot;{results.translatedQuery}&quot;
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4">
@@ -289,8 +376,8 @@ export function UnifiedFoodSearch() {
             </div>
           )}
 
-          {/* No Results */}
-          {results?.vectorResults && results.vectorResults.length === 0 && !loading && (
+          {/* Traditional No Results Fallback (only if AI explanation fails) */}
+          {results && !results.hasMatches && !noResultsContent && !streamingNoResults && (
             <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
               <div className="max-w-md mx-auto">
                 <div className="flex justify-center mb-4">

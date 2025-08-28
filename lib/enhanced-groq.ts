@@ -13,6 +13,22 @@ export interface QueryTranslation {
   searchStrategy: 'semantic' | 'ingredient' | 'cuisine' | 'texture' | 'method';
 }
 
+export interface QueryAnalysisResult {
+  analysis: string;
+  translatedQuery: string;
+  keyTerms: string[];
+  confidence: number;
+  searchStrategy: string;
+}
+
+export interface SearchResult {
+  id: string;
+  text: string;
+  region: string;
+  type: string;
+  score: number;
+}
+
 export class EnhancedGroqService {
   
   /**
@@ -20,6 +36,303 @@ export class EnhancedGroqService {
    */
   private static isApiKeyAvailable(): boolean {
     return !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'dummy-key-for-build');
+  }
+
+  /**
+   * NEW: Create explanation when no good results are found
+   */
+  static async createNoResultsExplanation(
+    originalQuery: string,
+    queryAnalysis: string,
+    allResults: SearchResult[]
+  ): Promise<ReadableStream> {
+    if (!this.isApiKeyAvailable()) {
+      const encoder = new TextEncoder();
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+            type: 'no_results_content',
+            content: `I couldn't find any dishes in our database that match "${originalQuery}". Try describing the cuisine type, cooking method, or main ingredients differently.`
+          })}\n\n`));
+          controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
+          controller.close();
+        },
+      });
+    }
+
+    try {
+      // Analyze what was closest if we have any results
+      let closestResults = '';
+      if (allResults.length > 0) {
+        const top3Closest = allResults.slice(0, 3);
+        closestResults = top3Closest.map((result, index) => {
+          const dishName = this.extractDishName(result.text);
+          return `${index + 1}. ${dishName} (${result.region}) - ${(result.score * 100).toFixed(0)}% match`;
+        }).join('\n');
+      }
+
+      const stream = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful food expert. When you cannot find good matches for a user's food search, politely explain why and provide constructive suggestions.
+
+Structure your response as:
+1. Acknowledge what they were looking for (1 sentence)
+2. Explain why no good matches were found (1-2 sentences) 
+3. Provide 2-3 specific suggestions for better search terms
+4. Optional: If there were some weak matches, briefly mention what was closest
+
+Be encouraging and helpful. Keep the tone friendly and supportive, under 120 words total.`
+          },
+          {
+            role: "user",
+            content: `User searched for: "${originalQuery}"
+
+What they were looking for: ${queryAnalysis}
+
+${closestResults ? `Closest matches found (but with low relevance):
+${closestResults}` : 'No relevant matches found in the database.'}
+
+Help explain why no good matches were found and suggest better search approaches.`
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.7,
+        max_tokens: 200,
+        stream: true,
+      });
+
+      const encoder = new TextEncoder();
+      
+      return new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of stream) {
+              const content = chunk.choices[0]?.delta?.content || '';
+              if (content) {
+                controller.enqueue(encoder.encode(
+                  `data: ${JSON.stringify({ type: 'no_results_content', content })}\n\n`
+                ));
+              }
+            }
+            controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
+            controller.close();
+          } catch (error) {
+            console.error('No results explanation streaming error:', error);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+              type: 'error', 
+              error: 'No results explanation failed' 
+            })}\n\n`));
+            controller.close();
+          }
+        },
+      });
+    } catch (error) {
+      console.error('Enhanced no results explanation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Analyze user query and translate for vector search
+   */
+  static async analyzeAndTranslateQuery(userQuery: string): Promise<QueryAnalysisResult> {
+    if (!this.isApiKeyAvailable()) {
+      return {
+        analysis: `Looking for food related to "${userQuery}"...`,
+        translatedQuery: userQuery,
+        keyTerms: userQuery.split(' ').filter(word => word.length > 2),
+        confidence: 0.5,
+        searchStrategy: 'semantic'
+      };
+    }
+
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `You are a food search expert. Analyze user queries and provide:
+
+1. A brief, engaging analysis of what the user is looking for (1-2 sentences)
+2. An optimized query for vector database search
+3. Key search terms
+4. Search strategy
+
+Focus on:
+- Cuisine types (Korean, Thai, Chinese, etc.)
+- Cooking methods (fermented, grilled, steamed, fried)
+- Food categories (noodles, soup, rice, vegetables)
+- Textures and flavors (spicy, creamy, crispy, sour)
+- Ingredients (beef, pork, vegetables, coconut)
+
+Return JSON format:
+{
+  "analysis": "Brief engaging description of what user wants",
+  "translatedQuery": "optimized search terms",
+  "keyTerms": ["term1", "term2", "term3"],
+  "confidence": 0.8,
+  "searchStrategy": "semantic|ingredient|cuisine|texture|method"
+}`
+          },
+          {
+            role: "user",
+            content: `Analyze this food search query: "${userQuery}"`
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.3,
+        max_tokens: 300,
+        response_format: { type: "json_object" }
+      });
+
+      const response = completion.choices[0]?.message?.content;
+      if (!response) {
+        throw new Error('No analysis response');
+      }
+
+      const parsed = JSON.parse(response);
+      
+      return {
+        analysis: parsed.analysis || `Looking for food related to "${userQuery}"`,
+        translatedQuery: parsed.translatedQuery || userQuery,
+        keyTerms: Array.isArray(parsed.keyTerms) ? parsed.keyTerms : userQuery.split(' ').filter(word => word.length > 2),
+        confidence: Math.max(0.1, Math.min(1.0, parsed.confidence || 0.7)),
+        searchStrategy: parsed.searchStrategy || 'semantic'
+      };
+
+    } catch (error) {
+      console.error('Query analysis error:', error);
+      return {
+        analysis: `Looking for food related to "${userQuery}"...`,
+        translatedQuery: userQuery,
+        keyTerms: userQuery.split(' ').filter(word => word.length > 2),
+        confidence: 0.6,
+        searchStrategy: 'semantic'
+      };
+    }
+  }
+
+  /**
+   * Create enhanced AI summary with top 3 results integration
+   */
+  static async createEnhancedSummaryWithResults(
+    originalQuery: string,
+    queryAnalysis: string,
+    top3Results: SearchResult[]
+  ): Promise<ReadableStream> {
+    if (!this.isApiKeyAvailable()) {
+      const encoder = new TextEncoder();
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+            type: 'summary_content',
+            content: `Based on your search, here are the top matches: ${top3Results.map(r => r.region + ' ' + r.type).join(', ')}.`
+          })}\n\n`));
+          controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
+          controller.close();
+        },
+      });
+    }
+
+    try {
+      // Create a concise summary of top 3 results
+      const top3Summary = top3Results.map((result, index) => {
+        const dishName = this.extractDishName(result.text);
+        return `${index + 1}. **${dishName}** (${result.region}) - ${result.type.toLowerCase()} with ${(result.score * 100).toFixed(0)}% match`;
+      }).join('\n');
+
+      const stream = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `You are a food expert creating concise, engaging summaries. Structure your response as:
+
+1. Brief interpretation of what the user wants (1 sentence)
+2. Top 3 matching dishes with brief highlights  
+3. Short cultural insight or recommendation (1-2 sentences)
+
+Keep it conversational, informative, and under 150 words total. Use the exact dish information provided.`
+          },
+          {
+            role: "user",
+            content: `User searched for: "${originalQuery}"
+
+Initial analysis: ${queryAnalysis}
+
+Top 3 matching results:
+${top3Summary}
+
+Create a structured summary highlighting these specific dishes with brief cultural context.`
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.7,
+        max_tokens: 250,
+        stream: true,
+      });
+
+      const encoder = new TextEncoder();
+      
+      return new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of stream) {
+              const content = chunk.choices[0]?.delta?.content || '';
+              if (content) {
+                controller.enqueue(encoder.encode(
+                  `data: ${JSON.stringify({ type: 'summary_content', content })}\n\n`
+                ));
+              }
+            }
+            controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
+            controller.close();
+          } catch (error) {
+            console.error('Summary streaming error:', error);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+              type: 'error', 
+              error: 'Summary stream failed' 
+            })}\n\n`));
+            controller.close();
+          }
+        },
+      });
+    } catch (error) {
+      console.error('Enhanced summary creation error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper method to extract dish names from descriptions
+   */
+  private static extractDishName(text: string): string {
+    // Look for dish names at the beginning of descriptions
+    const sentences = text.split('.');
+    const firstSentence = sentences[0];
+    
+    // Common patterns for dish names
+    const patterns = [
+      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+is\s+/,  // "Kimchi is a..."
+      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+features\s+/, // "Pad Thai features..."
+      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+are\s+/, // "Dumplings are..."
+    ];
+    
+    for (const pattern of patterns) {
+      const match = firstSentence.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    // Fallback: take first 1-3 words if they look like a dish name
+    const words = firstSentence.split(' ');
+    if (words.length >= 2 && words[0][0] === words[0][0].toUpperCase()) {
+      return words.slice(0, Math.min(3, words.length)).join(' ');
+    }
+    
+    return words[0] || 'Dish';
   }
 
   /**
@@ -246,6 +559,74 @@ export class EnhancedGroqService {
         confidence: 0.6,
         searchStrategy: 'semantic'
       };
+    }
+  }
+
+  /**
+   * Create streaming food context (for individual food items)
+   */
+  static async createStreamingFoodContext(foodItem: { text: string; region: string; type: string }): Promise<ReadableStream> {
+    if (!this.isApiKeyAvailable()) {
+      const encoder = new TextEncoder();
+      return new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
+            content: 'AI analysis is not available. Please check your API key configuration.' 
+          })}\n\n`));
+          controller.enqueue(encoder.encode('data: {"done": true}\n\n'));
+          controller.close();
+        },
+      });
+    }
+
+    try {
+      const stream = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `You are a food historian and cultural expert. Provide fascinating, engaging insights about foods including:
+            - Cultural significance and traditions
+            - Interesting historical facts and origins
+            - Traditional preparation methods
+            - Regional variations and local customs
+            - Fun facts that make the food special
+            
+            Write in an engaging, storytelling style. Keep responses informative but conversational, around 150-200 words.`
+          },
+          {
+            role: "user",
+            content: `Tell me about this fascinating food: ${foodItem.text} from ${foodItem.region}. What makes it special culturally and historically?`
+          }
+        ],
+        model: "llama3-8b-8192",
+        temperature: 0.7,
+        max_tokens: 300,
+        stream: true,
+      });
+
+      const encoder = new TextEncoder();
+      
+      return new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of stream) {
+              const content = chunk.choices[0]?.delta?.content || '';
+              if (content) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+              }
+            }
+            controller.enqueue(encoder.encode('data: {"done": true}\n\n'));
+            controller.close();
+          } catch (error) {
+            console.error('Streaming error:', error);
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`));
+            controller.close();
+          }
+        },
+      });
+    } catch (error) {
+      console.error('Enhanced Groq context streaming error:', error);
+      throw error;
     }
   }
 

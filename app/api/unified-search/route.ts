@@ -36,30 +36,63 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          // Step 1: Start AI analysis and query translation
-          console.log(`Starting unified search for: "${query}"`);
+          console.log(`Starting enhanced unified search for: "${query}"`);
           
-          let aiResponse: AIResponse | null = null;
-          let streamContent = '';
-
-          // Create AI analysis stream
-          const aiStream = await EnhancedGroqService.createUnifiedFoodAnalysis(query);
-          const aiReader = aiStream.getReader();
-          const decoder = new TextDecoder();
-
-          // Stream AI analysis while processing query translation
+          // Step 1: AI Query Analysis and Translation
+          console.log('Step 1: Analyzing and translating query...');
           let translatedQuery = query; // fallback
-          let aiProcessingComplete = false;
+          let queryAnalysis = null;
+          
+          try {
+            const analysisResult = await EnhancedGroqService.analyzeAndTranslateQuery(query);
+            translatedQuery = analysisResult.translatedQuery;
+            queryAnalysis = analysisResult.analysis;
+            
+            // Stream the initial analysis
+            controller.enqueue(encoder.encode(
+              `data: ${JSON.stringify({ 
+                type: 'analysis', 
+                content: analysisResult.analysis 
+              })}\n\n`
+            ));
+          } catch (error) {
+            console.error('Query analysis error:', error);
+            // Send fallback analysis
+            controller.enqueue(encoder.encode(
+              `data: ${JSON.stringify({ 
+                type: 'analysis', 
+                content: `Looking for food related to "${query}"...` 
+              })}\n\n`
+            ));
+          }
 
-          // Process AI stream
-          const processAIStream = async () => {
+          // Step 2: Vector Search
+          console.log(`Step 2: Performing vector search with: "${translatedQuery}"`);
+          const vectorResults = await searchSimilarFoods(translatedQuery, 8);
+          
+          // Step 3: Check if we have meaningful results
+          const meaningfulResults = vectorResults.filter(result => result.score > 0.1); // 10% threshold
+          const hasGoodMatches = meaningfulResults.length > 0;
+          
+          console.log(`Found ${vectorResults.length} total results, ${meaningfulResults.length} meaningful matches`);
+          
+          if (!hasGoodMatches) {
+            // Step 3a: AI says "no" - no good matches found
+            console.log('Step 3a: No good matches, letting AI explain...');
+            
             try {
+              const noResultsStream = await EnhancedGroqService.createNoResultsExplanation(
+                query,
+                queryAnalysis || `Looking for food related to "${query}"`,
+                vectorResults // Pass all results so AI can see what was close
+              );
+              
+              const reader = noResultsStream.getReader();
+              const decoder = new TextDecoder();
+
               while (true) {
-                const { done, value } = await aiReader.read();
-                if (done) {
-                  aiProcessingComplete = true;
-                  break;
-                }
+                const { done, value } = await reader.read();
+                if (done) break;
 
                 const chunk = decoder.decode(value, { stream: true });
                 const lines = chunk.split('\n');
@@ -69,71 +102,116 @@ export async function POST(request: NextRequest) {
                     try {
                       const data = JSON.parse(line.slice(6));
                       
-                      if (data.type === 'content') {
-                        streamContent += data.content;
-                        // Stream AI content to client
+                      if (data.type === 'no_results_content') {
                         controller.enqueue(encoder.encode(
                           `data: ${JSON.stringify({ 
-                            type: 'ai_content', 
+                            type: 'ai_no_results', 
                             content: data.content 
                           })}\n\n`
                         ));
-                      } else if (data.type === 'translation') {
-                        translatedQuery = data.translatedQuery;
-                        aiResponse = {
-                          answer: streamContent,
-                          translatedQuery: data.translatedQuery,
-                          confidence: data.confidence,
-                          keyTerms: data.keyTerms
-                        };
                       } else if (data.type === 'done') {
-                        aiProcessingComplete = true;
                         break;
                       }
                     } catch (parseError) {
-                      console.error('AI stream parse error:', parseError);
+                      console.error('No results stream parse error:', parseError);
                     }
                   }
                 }
               }
-            } catch (error) {
-              console.error('AI stream processing error:', error);
-              aiProcessingComplete = true;
+            } catch (noResultsError) {
+              console.error('No results explanation error:', noResultsError);
+              // Send fallback no results message
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ 
+                  type: 'ai_no_results', 
+                  content: `I couldn't find any dishes in our database that match "${query}". Try describing the cuisine type, cooking method, or main ingredients differently. For example, instead of specific dish names, try "Korean fermented vegetables" or "Thai spicy noodles".`
+                })}\n\n`
+              ));
             }
-          };
-
-          // Start AI processing
-          const aiPromise = processAIStream();
-
-          // Wait a moment for potential query translation
-          await new Promise(resolve => setTimeout(resolve, 2000));
-
-          // Step 2: Perform vector search with translated query
-          console.log(`Performing vector search with query: "${translatedQuery}"`);
-          
-          const vectorResults = await searchSimilarFoods(translatedQuery, 8);
-
-          // Wait for AI processing to complete
-          await aiPromise;
-
-          // Step 3: Send final results
-          controller.enqueue(encoder.encode(
-            `data: ${JSON.stringify({
-              type: 'search_results',
-              results: {
-                aiResponse: aiResponse || {
-                  answer: streamContent,
+            
+            // Send empty results
+            controller.enqueue(encoder.encode(
+              `data: ${JSON.stringify({
+                type: 'search_results',
+                results: {
+                  vectorResults: [],
+                  originalQuery: query,
                   translatedQuery: translatedQuery,
-                  confidence: 0.8,
-                  keyTerms: query.split(' ').filter(term => term.length > 2)
-                },
-                vectorResults: vectorResults,
-                originalQuery: query
-              }
-            })}\n\n`
-          ));
+                  hasMatches: false
+                }
+              })}\n\n`
+            ));
+            
+          } else {
+            // Step 3b: We have good matches - create summary
+            console.log('Step 3b: Good matches found, creating AI summary...');
+            const top3Results = meaningfulResults.slice(0, 3);
+            
+            try {
+              const summaryStream = await EnhancedGroqService.createEnhancedSummaryWithResults(
+                query,
+                queryAnalysis || `Looking for food related to "${query}"`,
+                top3Results
+              );
+              
+              const reader = summaryStream.getReader();
+              const decoder = new TextDecoder();
 
-          // Signal completion
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.slice(6));
+                      
+                      if (data.type === 'summary_content') {
+                        controller.enqueue(encoder.encode(
+                          `data: ${JSON.stringify({ 
+                            type: 'ai_summary', 
+                            content: data.content 
+                          })}\n\n`
+                        ));
+                      } else if (data.type === 'done') {
+                        break;
+                      }
+                    } catch (parseError) {
+                      console.error('Summary stream parse error:', parseError);
+                    }
+                  }
+                }
+              }
+            } catch (summaryError) {
+              console.error('Summary generation error:', summaryError);
+              // Send fallback summary
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ 
+                  type: 'ai_summary', 
+                  content: `Found ${meaningfulResults.length} matching dishes based on your search for "${query}". The top results include dishes from ${top3Results.map(r => r.region).join(', ')}.`
+                })}\n\n`
+              ));
+            }
+
+            // Send meaningful results
+            controller.enqueue(encoder.encode(
+              `data: ${JSON.stringify({
+                type: 'search_results',
+                results: {
+                  vectorResults: meaningfulResults,
+                  originalQuery: query,
+                  translatedQuery: translatedQuery,
+                  top3Results: top3Results,
+                  hasMatches: true
+                }
+              })}\n\n`
+            ));
+          }
+
+          // Step 4: Signal completion
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ type: 'done' })}\n\n`
           ));
