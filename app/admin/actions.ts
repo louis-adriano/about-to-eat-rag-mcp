@@ -32,7 +32,7 @@ async function requireAdminAccess() {
     }
 
     return { user, adminUser: adminUser[0] };
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Unauthorized: Admin access required');
   }
 }
@@ -123,6 +123,7 @@ export async function updateFoodItem(id: string, data: {
   }
 }
 
+// FIXED DELETE FUNCTION - This is the main fix
 export async function deleteFoodItem(id: string) {
   const { adminUser } = await requireAdminAccess();
   
@@ -138,6 +139,9 @@ export async function deleteFoodItem(id: string) {
       return { success: false, error: 'Food item not found' };
     }
     
+    // DELETE CHILD RECORDS FIRST - This fixes the foreign key constraint error
+    await db.delete(vectorSyncStatus).where(eq(vectorSyncStatus.foodItemId, id));
+    
     // Remove from vector database
     try {
       await vectorIndex.delete(item[0].externalId);
@@ -145,7 +149,7 @@ export async function deleteFoodItem(id: string) {
       console.warn('Vector deletion failed (item may not exist in vector DB):', vectorError);
     }
     
-    // Delete from PostgreSQL
+    // Delete from PostgreSQL (parent record last)
     await db.delete(foodItems).where(eq(foodItems.id, id));
     
     revalidatePath('/admin');
