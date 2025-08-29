@@ -2,12 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChefHat, Heart, Home, Info, Github, Settings, LogOut } from 'lucide-react';
+import { ChefHat, Heart, Home, Info, Github, Settings } from 'lucide-react';
 import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
+import { useUser as useClerkUser } from '@clerk/clerk-react'; // or correct import path
 
 export function Navbar() {
   const pathname = usePathname();
-  const { isSignedIn, user } = useUser();
+
+  // Check if Clerk is properly configured
+  const hasClerkKeys = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  const clerkUser = useClerkUser();
+  const isSignedIn = !!clerkUser.isSignedIn; // ensures boolean
 
   const isActive = (path: string) => pathname === path;
 
@@ -51,7 +57,7 @@ export function Navbar() {
             >
               About
             </Link>
-            {isSignedIn && (
+            {hasClerkKeys && isSignedIn && (
               <Link
                 href="/admin"
                 className={`text-sm font-medium transition-colors ${
@@ -89,7 +95,7 @@ export function Navbar() {
               >
                 <Info className="w-4 h-4" />
               </Link>
-              {isSignedIn && (
+              {hasClerkKeys && isSignedIn && (
                 <Link
                   href="/admin"
                   className={`p-2 rounded-lg transition-colors ${
@@ -104,20 +110,26 @@ export function Navbar() {
             </div>
 
             {/* Auth Actions */}
-            {isSignedIn ? (
-              <UserButton 
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-8 h-8'
-                  }
-                }}
-              />
+            {hasClerkKeys ? (
+              isSignedIn ? (
+                <UserButton 
+                  appearance={{
+                    elements: {
+                      avatarBox: 'w-8 h-8'
+                    }
+                  }}
+                />
+              ) : (
+                <SignInButton mode="modal">
+                  <button className="text-sm font-medium text-foreground hover:text-primary transition-colors px-4 py-2 rounded-lg hover:bg-primary/5">
+                    Sign In
+                  </button>
+                </SignInButton>
+              )
             ) : (
-              <SignInButton mode="modal">
-                <button className="text-sm font-medium text-foreground hover:text-primary transition-colors px-4 py-2 rounded-lg hover:bg-primary/5">
-                  Sign In
-                </button>
-              </SignInButton>
+              <div className="text-xs text-muted-foreground px-2">
+                Auth Disabled
+              </div>
             )}
 
             {/* GitHub Link */}
