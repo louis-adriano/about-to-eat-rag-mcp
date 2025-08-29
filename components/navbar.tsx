@@ -10,7 +10,7 @@ export function Navbar() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 w-full border-b border-primary/30 bg-primary/10 backdrop-blur supports-[backdrop-filter]:bg-primary/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
@@ -19,7 +19,7 @@ export function Navbar() {
               <div className="p-2 bg-primary rounded-xl shadow-lg">
                 <ChefHat className="w-6 h-6 text-primary-foreground" />
               </div>
-              <Heart className="w-3 h-3 text-secondary absolute -top-1 -right-1 fill-current" />
+              <Heart className="w-3 h-3 text-red-500 absolute -top-1 -right-1 fill-current" />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-serif font-semibold text-foreground">About To Eat</h1>
@@ -60,7 +60,7 @@ export function Navbar() {
                 className={`p-2 rounded-lg transition-colors ${
                   isActive('/')
                     ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
                 }`}
               >
                 <Home className="w-4 h-4" />
@@ -70,7 +70,7 @@ export function Navbar() {
                 className={`p-2 rounded-lg transition-colors ${
                   isActive('/about')
                     ? 'bg-primary/10 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
                 }`}
               >
                 <Info className="w-4 h-4" />
@@ -82,7 +82,7 @@ export function Navbar() {
               href="https://github.com/louis-adriano/about-to-eat-rag-mcp"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-colors"
               title="View on GitHub"
             >
               <Github className="w-4 h-4" />

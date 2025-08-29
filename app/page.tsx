@@ -18,17 +18,6 @@ export default function Home() {
         <div className="relative max-w-6xl mx-auto px-4">
           {/* Elegant Header */}
           <div className="text-center mb-16">
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <div className="relative">
-                <div className="p-6 bg-primary rounded-3xl shadow-xl">
-                  <ChefHat className="w-16 h-16 text-primary-foreground" />
-                </div>
-                <div className="absolute -top-2 -right-2 text-2xl">
-                  <Sparkles className="w-6 h-6 text-primary" />
-                </div>
-              </div>
-            </div>
-
             <h1 className="text-6xl md:text-7xl font-serif font-bold text-foreground mb-4 text-balance">
               About
               <span className="text-primary"> To Eat</span>
@@ -77,10 +66,10 @@ export default function Home() {
       <section className="py-20 bg-primary/8 border-t border-primary/20">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-serif font-bold text-foreground mb-4">Culinary Excellence</h2>
+            <h2 className="text-4xl font-serif font-bold text-foreground mb-4">Why Choose About To Eat?</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto text-pretty">
-              Our artificial intelligence understands the subtleties of world cuisine to offer you an 
-              authentic gastronomic experience
+              We&apos;ve reimagined food discovery by combining cultural knowledge with intelligent search, 
+              making it easier than ever to find your perfect dish
             </p>
           </div>
 
@@ -121,15 +110,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* AI Features Section - White */}
+      {/* Discovery Features Section - White */}
       <section className="py-20 bg-white border-t border-primary/20">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-serif font-bold text-foreground mb-4">
-              Powered by Advanced AI
+              Smart Food Discovery
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Experience the next generation of food discovery with AI that truly understands your cravings
+              Experience intelligent search that understands your cravings and connects you with authentic flavors from around the world
             </p>
           </div>
 
@@ -139,11 +128,11 @@ export default function Home() {
                 <div className="p-3 bg-primary/20 rounded-2xl">
                   <Sparkles className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-serif font-semibold text-foreground">Real-time Analysis</h3>
+                <h3 className="text-2xl font-serif font-semibold text-foreground">Intelligent Analysis</h3>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Watch as our AI analyzes your craving in real-time, providing insights about flavors, 
-                textures, and cultural backgrounds while finding the perfect food matches.
+                Our system analyzes your descriptions in real-time, understanding flavors, 
+                textures, and cultural preferences to find exactly what you&apos;re craving.
               </p>
             </div>
 
@@ -152,11 +141,11 @@ export default function Home() {
                 <div className="p-3 bg-primary/20 rounded-2xl">
                   <Brain className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-serif font-semibold text-foreground">Smart Translation</h3>
+                <h3 className="text-2xl font-serif font-semibold text-foreground">Cultural Context</h3>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Our AI translates your natural language descriptions into optimized search terms, 
-                ensuring you find exactly what you&apos;re looking for even with vague descriptions.
+                Learn about the rich history, traditions, and stories behind each dish, 
+                enriching your culinary journey with authentic cultural knowledge and background.
               </p>
             </div>
           </div>

@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${manrope.variable} ${playfair.variable} antialiased`}>
       <body className="min-h-screen bg-background font-sans">
-        <div className="min-h-screen bg-gradient-to-br from-background via-card to-muted">
+        <div className="min-h-screen bg-background">
           <Navbar />
           {children}
         </div>

@@ -91,13 +91,16 @@ export function UnifiedFoodSearch() {
                 setAnalysisContent(data.content);
                 setStreamingAnalysis(false);
                 setStreamingSummary(true);
+                
               } else if (data.type === 'ai_summary') {
                 setSummaryContent(prev => prev + data.content);
+                
               } else if (data.type === 'ai_no_results') {
                 setStreamingAnalysis(false);
                 setStreamingSummary(false);
                 setStreamingNoResults(true);
                 setNoResultsContent(prev => prev + data.content);
+                
               } else if (data.type === 'search_results') {
                 searchResults = data.results;
                 setStreamingSummary(false);
@@ -235,6 +238,9 @@ export function UnifiedFoodSearch() {
                 {analysisContent ? (
                   <p className="text-foreground leading-relaxed text-base">
                     {analysisContent}
+                    {streamingAnalysis && (
+                      <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />
+                    )}
                   </p>
                 ) : streamingAnalysis ? (
                   <div className="flex items-center gap-2 text-primary">
@@ -268,7 +274,7 @@ export function UnifiedFoodSearch() {
                       <div className="text-foreground leading-relaxed text-base whitespace-pre-wrap">
                         {summaryContent}
                         {streamingSummary && (
-                          <span className="inline-block w-2 h-5 bg-secondary ml-1 animate-pulse" />
+                          <span className="inline-block w-0.5 h-5 bg-secondary ml-1 animate-pulse" />
                         )}
                       </div>
                       
@@ -314,7 +320,7 @@ export function UnifiedFoodSearch() {
                       <div className="text-foreground leading-relaxed text-base whitespace-pre-wrap">
                         {noResultsContent}
                         {streamingNoResults && (
-                          <span className="inline-block w-2 h-5 bg-muted-foreground ml-1 animate-pulse" />
+                          <span className="inline-block w-0.5 h-5 bg-muted-foreground ml-1 animate-pulse" />
                         )}
                       </div>
                       
