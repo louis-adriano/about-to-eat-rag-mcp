@@ -20,11 +20,11 @@ export default function Home() {
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-4 mb-8">
               <div className="relative">
-                <div className="p-6 bg-gradient-to-br from-primary via-secondary to-primary rounded-3xl shadow-xl">
+                <div className="p-6 bg-primary rounded-3xl shadow-xl">
                   <ChefHat className="w-16 h-16 text-primary-foreground" />
                 </div>
                 <div className="absolute -top-2 -right-2 text-2xl">
-                  ✨
+                  <Sparkles className="w-6 h-6 text-primary" />
                 </div>
               </div>
             </div>
@@ -56,11 +56,11 @@ export default function Home() {
                 <span>15+ Cuisines</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-lg">✨</span>
+                <Sparkles className="w-4 h-4 text-primary" />
                 <span>Authentic Recipes</span>
               </div>
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
+                <Brain className="w-4 h-4 text-primary" />
                 <span>AI-Powered</span>
               </div>
             </div>
@@ -74,7 +74,7 @@ export default function Home() {
       </section>
 
       {/* Features Section - Turquoise */}
-      <section className="py-20 bg-gradient-to-br from-primary/8 to-secondary/8 border-t border-primary/20">
+      <section className="py-20 bg-primary/8 border-t border-primary/20">
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-serif font-bold text-foreground mb-4">Culinary Excellence</h2>
@@ -86,8 +86,8 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             <div className="group text-center p-8 rounded-3xl bg-white/90 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-primary/30 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <span className="text-3xl">⭐</span>
+              <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Utensils className="w-10 h-10 text-primary" />
               </div>
               <h3 className="text-2xl font-serif font-semibold text-foreground mb-4">Authentic Tradition</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -97,8 +97,8 @@ export default function Home() {
             </div>
 
             <div className="group text-center p-8 rounded-3xl bg-white/90 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-              <div className="w-20 h-20 bg-gradient-to-br from-secondary/20 to-secondary/30 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Search className="w-10 h-10 text-secondary" />
+              <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+                <Search className="w-10 h-10 text-primary" />
               </div>
               <h3 className="text-2xl font-serif font-semibold text-foreground mb-4">Intuitive Search</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -108,7 +108,7 @@ export default function Home() {
             </div>
 
             <div className="group text-center p-8 rounded-3xl bg-white/90 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
+              <div className="w-20 h-20 bg-primary/20 rounded-3xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Globe className="w-10 h-10 text-primary" />
               </div>
               <h3 className="text-2xl font-serif font-semibold text-foreground mb-4">Culinary Journey</h3>
@@ -136,7 +136,7 @@ export default function Home() {
           <div className="grid md:grid-cols-2 gap-8">
             <div className="group p-8 rounded-3xl bg-card/80 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/30 rounded-2xl">
+                <div className="p-3 bg-primary/20 rounded-2xl">
                   <Sparkles className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-2xl font-serif font-semibold text-foreground">Real-time Analysis</h3>
@@ -149,8 +149,8 @@ export default function Home() {
 
             <div className="group p-8 rounded-3xl bg-card/80 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-3 bg-gradient-to-br from-secondary/20 to-secondary/30 rounded-2xl">
-                  <Brain className="w-6 h-6 text-secondary" />
+                <div className="p-3 bg-primary/20 rounded-2xl">
+                  <Brain className="w-6 h-6 text-primary" />
                 </div>
                 <h3 className="text-2xl font-serif font-semibold text-foreground">Smart Translation</h3>
               </div>
@@ -164,7 +164,7 @@ export default function Home() {
       </section>
 
       {/* Footer - Turquoise */}
-      <footer className="bg-gradient-to-r from-primary/10 to-secondary/10 border-t border-primary/30">
+      <footer className="bg-primary/10 border-t border-primary/30">
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
@@ -182,7 +182,7 @@ export default function Home() {
                 href="https://linkedin.com/in/louisadriano"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:text-secondary font-medium transition-colors duration-200"
+                className="text-primary hover:text-primary/80 font-medium transition-colors duration-200"
               >
                 Louis Adriano
               </a>

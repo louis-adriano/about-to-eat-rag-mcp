@@ -152,7 +152,7 @@ export function FoodCard({ food, rank }: FoodCardProps) {
         {/* Header with rank and score */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary to-secondary text-primary-foreground text-sm font-bold rounded-full shadow-md">
+            <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-md">
               {rank}
             </div>
             <div>
