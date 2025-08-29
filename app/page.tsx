@@ -35,9 +35,9 @@ export default function Home() {
             </h1>
 
             <div className="flex items-center justify-center gap-3 mb-6">
-              <Heart className="w-5 h-5 text-secondary fill-current" />
-              <span className="text-lg text-muted-foreground font-medium">Discover Culinary Excellence</span>
-              <Heart className="w-5 h-5 text-secondary fill-current" />
+              <span className="text-lg text-muted-foreground font-medium">
+              Find your next favorite dish. Easily.
+              </span>
             </div>
 
             <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed mb-12 text-pretty">
