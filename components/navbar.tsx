@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChefHat, Heart, Home, Info, Github, ExternalLink, Search } from 'lucide-react';
+import { ChefHat, Heart, Home, Info, Github, Settings, LogOut } from 'lucide-react';
+import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 
 export function Navbar() {
   const pathname = usePathname();
+  const { isSignedIn, user } = useUser();
 
   const isActive = (path: string) => pathname === path;
 
@@ -49,9 +51,21 @@ export function Navbar() {
             >
               About
             </Link>
+            {isSignedIn && (
+              <Link
+                href="/admin"
+                className={`text-sm font-medium transition-colors ${
+                  isActive('/admin')
+                    ? 'text-primary'
+                    : 'text-foreground hover:text-primary'
+                }`}
+              >
+                Admin
+              </Link>
+            )}
           </div>
 
-          {/* Mobile and Desktop Actions */}
+          {/* User Actions */}
           <div className="flex items-center gap-2">
             {/* Mobile Navigation */}
             <div className="flex md:hidden items-center gap-1">
@@ -75,7 +89,36 @@ export function Navbar() {
               >
                 <Info className="w-4 h-4" />
               </Link>
+              {isSignedIn && (
+                <Link
+                  href="/admin"
+                  className={`p-2 rounded-lg transition-colors ${
+                    isActive('/admin')
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+                  }`}
+                >
+                  <Settings className="w-4 h-4" />
+                </Link>
+              )}
             </div>
+
+            {/* Auth Actions */}
+            {isSignedIn ? (
+              <UserButton 
+                appearance={{
+                  elements: {
+                    avatarBox: 'w-8 h-8'
+                  }
+                }}
+              />
+            ) : (
+              <SignInButton mode="modal">
+                <button className="text-sm font-medium text-foreground hover:text-primary transition-colors px-4 py-2 rounded-lg hover:bg-primary/5">
+                  Sign In
+                </button>
+              </SignInButton>
+            )}
 
             {/* GitHub Link */}
             <a

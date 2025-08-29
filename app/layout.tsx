@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter, Manrope, Playfair_Display } from 'next/font/google'
+import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 import { Navbar } from '../components/navbar'
 
@@ -29,13 +30,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${playfair.variable} antialiased`}>
-      <body className="min-h-screen bg-background font-sans">
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          {children}
-        </div>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${manrope.variable} ${playfair.variable} antialiased`}>
+        <body className="min-h-screen bg-background font-sans">
+          <div className="min-h-screen bg-background">
+            <Navbar />
+            {children}
+          </div>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
