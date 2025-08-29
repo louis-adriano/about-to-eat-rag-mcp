@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { formatScore, getScoreColor } from '../lib/utils';
+import { formatScore, getScoreColor } from '@/lib/utils';
 import { MapPin, Utensils, Loader2, Sparkles, X, StopCircle } from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Button } from './ui/button';
 
 interface FoodItem {
   id: string;
@@ -134,143 +136,155 @@ export function FoodCard({ food, rank }: FoodCardProps) {
     setStreamComplete(true);
   };
 
+  // Get quality rating based on score (without stars)
+  const getQualityRating = (score: number) => {
+    if (score >= 0.7) return { text: 'Excellent', color: 'text-green-600' };
+    if (score >= 0.4) return { text: 'Very Good', color: 'text-yellow-600' };
+    if (score >= 0.1) return { text: 'Good', color: 'text-orange-600' };
+    return { text: 'Fair', color: 'text-red-600' };
+  };
+
+  const qualityRating = getQualityRating(validScore);
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-all duration-200 relative">
-      {/* Header with rank and score */}
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
-            {rank}
-          </span>
-          <span className="text-sm text-gray-500">Rank #{rank}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="text-right">
-            <div className={`text-sm font-medium ${scoreColor}`}>
-              {formattedScore}% match
+    <Card className="group overflow-hidden rounded-3xl bg-card/90 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+      <CardContent className="p-6">
+        {/* Header with rank and score */}
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary to-secondary text-primary-foreground text-sm font-bold rounded-full shadow-md">
+              {rank}
             </div>
-            {/* Quality indicator */}
-            {validScore >= 0.7 && (
-              <div className="text-xs text-green-600 font-medium">Excellent</div>
-            )}
-            {validScore >= 0.4 && validScore < 0.7 && (
-              <div className="text-xs text-yellow-600 font-medium">Good</div>
-            )}
-            {validScore >= 0.1 && validScore < 0.4 && (
-              <div className="text-xs text-orange-600 font-medium">Fair</div>
-            )}
-            {validScore < 0.1 && validScore > 0 && (
-              <div className="text-xs text-red-600 font-medium">Low</div>
-            )}
+            <div>
+              <div className="text-sm text-muted-foreground font-medium">Rank #{rank}</div>
+            </div>
           </div>
           
-          {/* AI Context Button */}
-          <button
-            onClick={handleGetStreamingContext}
-            disabled={false}
-            className={`p-2 rounded-full transition-colors ${
-              isStreaming 
-                ? 'bg-red-50 hover:bg-red-100 text-red-600' 
-                : 'bg-purple-50 hover:bg-purple-100 text-purple-600'
-            }`}
-            title={isStreaming ? "Stop streaming" : "Get AI-powered cultural context"}
-          >
-            {isStreaming ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
-            )}
-          </button>
-
-          {/* Stop button when streaming */}
-          {isStreaming && (
-            <button
-              onClick={handleStopStream}
-              className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
-              title="Stop streaming"
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className={`text-sm font-semibold ${scoreColor}`}>
+                {formattedScore}% match
+              </div>
+              <div className={`text-xs font-medium ${qualityRating.color}`}>
+                {qualityRating.text}
+              </div>
+            </div>
+            
+            {/* AI Context Button */}
+            <Button
+              onClick={handleGetStreamingContext}
+              variant="outline"
+              size="sm"
+              className={`rounded-full border-2 transition-all duration-200 ${
+                isStreaming 
+                  ? 'border-destructive/30 bg-destructive/10 hover:bg-destructive/20 text-destructive' 
+                  : 'border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary'
+              }`}
+              title={isStreaming ? "Stop streaming" : "Get AI-powered cultural context"}
             >
-              <StopCircle className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Food description */}
-      <p className="text-gray-800 text-base leading-relaxed mb-4">
-        {text}
-      </p>
-
-      {/* Food metadata */}
-      <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-4">
-        <div className="flex items-center gap-1">
-          <MapPin className="w-4 h-4" />
-          <span className="font-medium">Region:</span>
-          <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md font-medium">
-            {region}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Utensils className="w-4 h-4" />
-          <span className="font-medium">Type:</span>
-          <span className="bg-green-50 text-green-700 px-2 py-1 rounded-md font-medium">
-            {type}
-          </span>
-        </div>
-      </div>
-
-      {/* AI Context Panel with Streaming */}
-      {showContext && (
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purple-600" />
-              <h4 className="text-sm font-semibold text-purple-900">Cultural Context</h4>
-              {isStreaming && (
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded animate-pulse">
-                  Streaming...
-                </span>
+              {isStreaming ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4" />
               )}
-            </div>
-            <button
-              onClick={() => setShowContext(false)}
-              className="p-1 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-3 h-3" />
-            </button>
+            </Button>
+
+            {/* Stop button when streaming */}
+            {isStreaming && (
+              <Button
+                onClick={handleStopStream}
+                variant="outline"
+                size="sm"
+                className="rounded-full border-2 border-destructive/30 bg-destructive/10 hover:bg-destructive/20 text-destructive"
+                title="Stop streaming"
+              >
+                <StopCircle className="w-4 h-4" />
+              </Button>
+            )}
           </div>
-          
-          <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-            {context ? (
-              <div className="space-y-2">
-                <p className="text-sm text-purple-800 leading-relaxed whitespace-pre-wrap">
-                  {context}
+        </div>
+
+        {/* Food description */}
+        <p className="text-foreground text-base leading-relaxed mb-6">
+          {text}
+        </p>
+
+        {/* Food metadata */}
+        <div className="flex flex-wrap gap-4 text-sm mb-6">
+          <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-2xl border border-primary/20">
+            <MapPin className="w-4 h-4 text-primary" />
+            <span className="font-medium text-primary">Region:</span>
+            <span className="text-primary font-semibold">
+              {region}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-2xl border border-accent/20">
+            <Utensils className="w-4 h-4 text-accent" />
+            <span className="font-medium text-accent">Type:</span>
+            <span className="text-accent font-semibold">
+              {type}
+            </span>
+          </div>
+        </div>
+
+        {/* AI Context Panel with Streaming */}
+        {showContext && (
+          <Card className="border border-primary/30 bg-primary/5 shadow-lg">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <h4 className="text-sm font-serif font-semibold text-primary">Cultural Context</h4>
                   {isStreaming && (
-                    <span className="inline-block w-2 h-4 bg-purple-600 ml-1 animate-pulse" />
+                    <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full animate-pulse">
+                      Streaming...
+                    </span>
                   )}
-                </p>
-                {streamComplete && (
-                  <div className="text-xs text-purple-600 font-medium flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    Powered by Groq AI
+                </div>
+                <Button
+                  onClick={() => setShowContext(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-full w-6 h-6 p-0 hover:bg-primary/10 text-primary/60 hover:text-primary"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+              
+              <div className="bg-background/90 backdrop-blur-sm rounded-2xl p-4 border border-primary/20">
+                {context ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                      {context}
+                      {isStreaming && (
+                        <span className="inline-block w-2 h-4 bg-primary ml-1 animate-pulse" />
+                      )}
+                    </p>
+                    {streamComplete && (
+                      <div className="text-xs text-primary font-medium flex items-center gap-1 pt-2 border-t border-primary/20">
+                        <Sparkles className="w-3 h-3" />
+                        Powered by Groq AI
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-primary text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Loading cultural insights...</span>
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="flex items-center gap-2 text-purple-600 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Loading cultural insights...</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-500">
-          Raw score: {validScore.toFixed(4)}
-        </div>
-      )}
-    </div>
+        {/* Debug info in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-3 p-2 bg-muted/50 rounded-xl text-xs text-muted-foreground">
+            Raw score: {validScore.toFixed(4)}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

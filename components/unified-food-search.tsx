@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { Search, Loader2, AlertCircle, Sparkles, Brain, ChefHat, Utensils, Lightbulb, XCircle } from 'lucide-react';
 import { SearchResult } from '../types/food';
 import { FoodCard } from './food-card';
+import { Card, CardContent } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 interface UnifiedSearchResults {
   vectorResults: SearchResult[];
@@ -142,87 +145,70 @@ export function UnifiedFoodSearch() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6 space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="relative">
-            <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl shadow-lg">
-              <Search className="w-8 h-8 text-white" />
+    <div className="w-full max-w-6xl mx-auto space-y-8">
+      {/* Elegant Search Section */}
+      <div className="max-w-2xl mx-auto">
+        <Card className="p-8 shadow-2xl border bg-card/90 backdrop-blur-sm">
+          <CardContent className="p-0">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-serif font-semibold text-foreground mb-2">
+                What would you like to taste?
+              </h3>
+              <p className="text-muted-foreground">Describe your cravings, we&apos;ll guide you to the perfect dish</p>
             </div>
-            <div className="absolute -top-1 -right-1">
-              <Sparkles className="w-5 h-5 text-yellow-400 fill-current" />
+
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="relative">
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ex: A comforting dish with melted cheese..."
+                  className="h-14 pl-6 pr-16 text-lg rounded-2xl border-2 border-border focus:border-primary bg-background"
+                  disabled={loading}
+                />
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={loading || !query.trim()}
+                  className="absolute right-2 top-2 h-10 px-6 rounded-xl bg-primary hover:bg-primary/90"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5 mr-2" />
+                      Discover
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+
+            <div className="flex flex-wrap gap-2 mt-4 justify-center">
+              {sampleQueries.map((suggestion) => (
+                <Button
+                  key={suggestion}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSampleClick(suggestion)}
+                  disabled={loading}
+                  className="rounded-full text-xs hover:bg-primary hover:text-primary-foreground bg-transparent"
+                >
+                  {suggestion}
+                </Button>
+              ))}
             </div>
-          </div>
-        </div>
-        
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          AI-Powered Food Discovery
-        </h2>
-        <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          Describe what you&apos;re craving and get intelligent recommendations with cultural insights!
-        </p>
-      </div>
-
-      {/* Search Form */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <form onSubmit={handleSearch} className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Describe what you're craving... (e.g., 'spicy fermented Korean side dish')"
-              className="w-full pl-10 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800 placeholder-gray-500 text-lg"
-              disabled={loading}
-            />
-          </div>
-          
-          <button
-            type="submit"
-            disabled={loading || !query.trim()}
-            className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-3 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <Brain className="w-5 h-5" />
-                Search with AI
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Sample Queries */}
-        <div className="mt-6">
-          <p className="text-sm text-gray-600 mb-3 font-medium">Try these sample searches:</p>
-          <div className="flex flex-wrap gap-2">
-            {sampleQueries.map((sample, index) => (
-              <button
-                key={index}
-                onClick={() => handleSampleClick(sample)}
-                className="px-3 py-2 text-sm bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 rounded-lg hover:from-gray-100 hover:to-gray-200 transition-all duration-200 border border-gray-200 hover:border-gray-300 disabled:opacity-50"
-                disabled={loading}
-              >
-                {sample}
-              </button>
-            ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
           <div>
-            <p className="text-red-800 font-medium">Search Error</p>
-            <p className="text-red-700 text-sm">{error}</p>
+            <p className="text-destructive font-medium">Search Error</p>
+            <p className="text-destructive/80 text-sm">{error}</p>
           </div>
         </div>
       )}
@@ -231,140 +217,146 @@ export function UnifiedFoodSearch() {
       {searchPerformed && (
         <div className="space-y-6">
           {/* AI Analysis Section */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Lightbulb className="w-5 h-5 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-bold text-blue-900">Understanding Your Craving</h3>
-              {streamingAnalysis && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full animate-pulse">
-                  Analyzing...
-                </span>
-              )}
-            </div>
-            
-            <div className="bg-white rounded-lg p-5 border border-blue-100 shadow-sm">
-              {analysisContent ? (
-                <p className="text-blue-800 leading-relaxed text-base">
-                  {analysisContent}
-                </p>
-              ) : streamingAnalysis ? (
-                <div className="flex items-center gap-2 text-blue-600">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Analyzing your food craving...</span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          {/* AI Summary with Top 3 (for successful matches) */}
-          {(summaryContent || streamingSummary) && (
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+          <Card className="border bg-primary/5 shadow-lg">
+            <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Brain className="w-5 h-5 text-purple-600" />
+                <div className="p-2 bg-primary/20 rounded-lg">
+                  <Lightbulb className="w-5 h-5 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold text-purple-900">AI Recommendations</h3>
-                {streamingSummary && (
-                  <span className="text-xs bg-purple-100 text-purple-700 px-3 py-1 rounded-full animate-pulse">
-                    Generating...
-                  </span>
-                )}
-              </div>
-              
-              <div className="bg-white rounded-lg p-5 border border-purple-100 shadow-sm">
-                {summaryContent ? (
-                  <div className="space-y-3">
-                    <div className="text-purple-800 leading-relaxed text-base whitespace-pre-wrap">
-                      {summaryContent}
-                      {streamingSummary && (
-                        <span className="inline-block w-2 h-5 bg-purple-600 ml-1 animate-pulse" />
-                      )}
-                    </div>
-                    
-                    {!streamingSummary && summaryContent && (
-                      <div className="mt-4 pt-3 border-t border-purple-100">
-                        <div className="text-xs text-purple-600 font-medium flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" />
-                          Powered by Advanced AI Analysis
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-purple-600">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Generating personalized recommendations...</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* AI "No Results" Explanation */}
-          {(noResultsContent || streamingNoResults) && (
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <XCircle className="w-5 h-5 text-orange-600" />
-                </div>
-                <h3 className="text-xl font-bold text-orange-900">Search Results</h3>
-                {streamingNoResults && (
-                  <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full animate-pulse">
+                <h3 className="text-xl font-serif font-semibold text-foreground">Understanding Your Craving</h3>
+                {streamingAnalysis && (
+                  <span className="text-xs bg-primary/20 text-primary px-3 py-1 rounded-full animate-pulse">
                     Analyzing...
                   </span>
                 )}
               </div>
               
-              <div className="bg-white rounded-lg p-5 border border-orange-100 shadow-sm">
-                {noResultsContent ? (
-                  <div className="space-y-3">
-                    <div className="text-orange-800 leading-relaxed text-base whitespace-pre-wrap">
-                      {noResultsContent}
-                      {streamingNoResults && (
-                        <span className="inline-block w-2 h-5 bg-orange-600 ml-1 animate-pulse" />
+              <div className="bg-background/90 backdrop-blur-sm rounded-2xl p-5 border border-primary/30 shadow-sm">
+                {analysisContent ? (
+                  <p className="text-foreground leading-relaxed text-base">
+                    {analysisContent}
+                  </p>
+                ) : streamingAnalysis ? (
+                  <div className="flex items-center gap-2 text-primary">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Analyzing your food craving...</span>
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* AI Summary with Top 3 (for successful matches) */}
+          {(summaryContent || streamingSummary) && (
+            <Card className="border bg-secondary/5 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-secondary/20 rounded-lg">
+                    <Brain className="w-5 h-5 text-secondary" />
+                  </div>
+                  <h3 className="text-xl font-serif font-semibold text-foreground">AI Recommendations</h3>
+                  {streamingSummary && (
+                    <span className="text-xs bg-secondary/20 text-secondary px-3 py-1 rounded-full animate-pulse">
+                      Generating...
+                    </span>
+                  )}
+                </div>
+                
+                <div className="bg-background/90 backdrop-blur-sm rounded-2xl p-5 border border-secondary/30 shadow-sm">
+                  {summaryContent ? (
+                    <div className="space-y-3">
+                      <div className="text-foreground leading-relaxed text-base whitespace-pre-wrap">
+                        {summaryContent}
+                        {streamingSummary && (
+                          <span className="inline-block w-2 h-5 bg-secondary ml-1 animate-pulse" />
+                        )}
+                      </div>
+                      
+                      {!streamingSummary && summaryContent && (
+                        <div className="mt-4 pt-3 border-t border-secondary/20">
+                          <div className="text-xs text-secondary font-medium flex items-center gap-1">
+                            <Sparkles className="w-3 h-3" />
+                            Powered by Advanced AI Analysis
+                          </div>
+                        </div>
                       )}
                     </div>
-                    
-                    {!streamingNoResults && noResultsContent && (
-                      <div className="mt-4 pt-3 border-t border-orange-100">
-                        <div className="text-xs text-orange-600 font-medium flex items-center gap-1">
-                          <Brain className="w-3 h-3" />
-                          AI-Powered Search Analysis
-                        </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-secondary">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Generating personalized recommendations...</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI "No Results" Explanation */}
+          {(noResultsContent || streamingNoResults) && (
+            <Card className="border bg-muted shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-muted-foreground/20 rounded-lg">
+                    <XCircle className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-serif font-semibold text-foreground">Search Results</h3>
+                  {streamingNoResults && (
+                    <span className="text-xs bg-muted-foreground/20 text-muted-foreground px-3 py-1 rounded-full animate-pulse">
+                      Analyzing...
+                    </span>
+                  )}
+                </div>
+                
+                <div className="bg-background/90 backdrop-blur-sm rounded-2xl p-5 border border-muted-foreground/30 shadow-sm">
+                  {noResultsContent ? (
+                    <div className="space-y-3">
+                      <div className="text-foreground leading-relaxed text-base whitespace-pre-wrap">
+                        {noResultsContent}
+                        {streamingNoResults && (
+                          <span className="inline-block w-2 h-5 bg-muted-foreground ml-1 animate-pulse" />
+                        )}
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-orange-600">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Analyzing search results...</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                      
+                      {!streamingNoResults && noResultsContent && (
+                        <div className="mt-4 pt-3 border-t border-muted-foreground/20">
+                          <div className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                            <Brain className="w-3 h-3" />
+                            AI-Powered Search Analysis
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Analyzing search results...</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Search Results (only show if we have matches) */}
           {results?.vectorResults && results.vectorResults.length > 0 && results.hasMatches && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                  <Utensils className="w-6 h-6" />
-                  All Matching Dishes
-                  <span className="text-gray-500 font-normal text-lg">
+                <h3 className="text-3xl font-serif font-bold text-foreground flex items-center gap-3">
+                  <Utensils className="w-8 h-8 text-primary" />
+                  Matching Dishes
+                  <span className="text-muted-foreground font-normal text-xl">
                     ({results.vectorResults.length} found for &quot;{results.originalQuery}&quot;)
                   </span>
                 </h3>
                 {results.translatedQuery && results.translatedQuery !== results.originalQuery && (
-                  <div className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-lg">
+                  <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-2xl border border-border">
                     Optimized to: &quot;{results.translatedQuery}&quot;
                   </div>
                 )}
               </div>
 
-              <div className="grid gap-4">
+              <div className="grid gap-6">
                 {results.vectorResults.map((food, index) => (
                   <FoodCard
                     key={food.id}
@@ -378,31 +370,37 @@ export function UnifiedFoodSearch() {
 
           {/* Traditional No Results Fallback (only if AI explanation fails) */}
           {results && !results.hasMatches && !noResultsContent && !streamingNoResults && (
-            <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-              <div className="max-w-md mx-auto">
-                <div className="flex justify-center mb-4">
-                  <ChefHat className="w-16 h-16 text-gray-300" />
+            <Card className="border-2 border-dashed border-border bg-background">
+              <CardContent className="text-center py-16">
+                <div className="max-w-md mx-auto">
+                  <div className="flex justify-center mb-6">
+                    <div className="p-4 bg-muted rounded-3xl">
+                      <ChefHat className="w-16 h-16 text-muted-foreground" />
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-2xl font-serif font-semibold text-foreground mb-4">
+                    No matching foods found
+                  </h3>
+                  
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    We couldn&apos;t find any dishes matching your search. Try describing flavors, ingredients, or cooking methods.
+                  </p>
+                  
+                  <Card className="bg-primary/5 border-primary/20">
+                    <CardContent className="p-4">
+                      <p className="text-sm text-primary font-semibold mb-3">💡 Search Tips:</p>
+                      <ul className="text-sm text-primary/80 text-left space-y-2">
+                        <li>• Use descriptive terms (e.g., &quot;spicy&quot;, &quot;fermented&quot;, &quot;creamy&quot;)</li>
+                        <li>• Mention cuisines (e.g., &quot;Korean&quot;, &quot;Thai&quot;, &quot;Italian&quot;)</li>
+                        <li>• Describe cooking methods (e.g., &quot;grilled&quot;, &quot;steamed&quot;, &quot;fried&quot;)</li>
+                        <li>• Include main ingredients (e.g., &quot;rice&quot;, &quot;noodles&quot;, &quot;vegetables&quot;)</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
                 </div>
-                
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No matching foods found
-                </h3>
-                
-                <p className="text-gray-600 mb-4 leading-relaxed">
-                  We couldn&apos;t find any dishes matching your search. Try describing flavors, ingredients, or cooking methods.
-                </p>
-                
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <p className="text-sm text-blue-800 font-medium mb-2">💡 Search Tips:</p>
-                  <ul className="text-sm text-blue-700 text-left space-y-1">
-                    <li>• Use descriptive terms (e.g., &quot;spicy&quot;, &quot;fermented&quot;, &quot;creamy&quot;)</li>
-                    <li>• Mention cuisines (e.g., &quot;Korean&quot;, &quot;Thai&quot;, &quot;Italian&quot;)</li>
-                    <li>• Describe cooking methods (e.g., &quot;grilled&quot;, &quot;steamed&quot;, &quot;fried&quot;)</li>
-                    <li>• Include main ingredients (e.g., &quot;rice&quot;, &quot;noodles&quot;, &quot;vegetables&quot;)</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}
