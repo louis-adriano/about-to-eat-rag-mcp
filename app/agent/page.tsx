@@ -1,7 +1,13 @@
+'use client';
+
 import { AgentChatInterface } from '../../components/agent-chat-interface';
 import { Bot, Sparkles, MessageCircle, Search } from 'lucide-react';
+import { useEffect } from 'react';
 
 export default function AgentPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   return (
     <main className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-secondary/5">
       {/* Hero Section */}
