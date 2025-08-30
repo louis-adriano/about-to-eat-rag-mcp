@@ -1,18 +1,19 @@
+// File: app/api/unified-search/route.ts (Updated with memory support)
 import { NextRequest } from 'next/server';
 import { searchSimilarFoods } from '../../../lib/vector-db';
 import { EnhancedGroqService } from '../../../lib/enhanced-groq';
+import { ConversationMessage } from '../../../types/conversation';
 import { z } from 'zod';
+
+const ConversationMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+});
 
 const UnifiedSearchSchema = z.object({
   query: z.string().min(1).max(500),
+  conversationHistory: z.array(ConversationMessageSchema).optional().default([]),
 });
-
-interface AIResponse {
-  answer: string;
-  translatedQuery: string;
-  confidence: number;
-  keyTerms: string[];
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { query } = UnifiedSearchSchema.parse(body);
+    const { query, conversationHistory = [] } = UnifiedSearchSchema.parse(body);
 
     const encoder = new TextEncoder();
 
@@ -36,19 +37,23 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          console.log(`Starting enhanced unified search for: "${query}"`);
+          console.log(`Starting enhanced unified search with memory for: "${query}"`);
+          console.log(`Conversation history length: ${conversationHistory.length} messages`);
           
-          // Step 1: AI Query Analysis and Translation
-          console.log('Step 1: Analyzing and translating query...');
+          // Step 1: AI Query Analysis and Translation with Memory
+          console.log('Step 1: Analyzing and translating query with conversation context...');
           let translatedQuery = query; // fallback
           let queryAnalysis = null;
           
           try {
-            const analysisResult = await EnhancedGroqService.analyzeAndTranslateQuery(query);
+            const analysisResult = await EnhancedGroqService.analyzeAndTranslateQueryWithMemory(
+              query, 
+              conversationHistory
+            );
             translatedQuery = analysisResult.translatedQuery;
             queryAnalysis = analysisResult.analysis;
             
-            // Stream the initial analysis
+            // Stream the enhanced analysis with memory context
             controller.enqueue(encoder.encode(
               `data: ${JSON.stringify({ 
                 type: 'analysis', 
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
               })}\n\n`
             ));
           } catch (error) {
-            console.error('Query analysis error:', error);
+            console.error('Query analysis with memory error:', error);
             // Send fallback analysis
             controller.enqueue(encoder.encode(
               `data: ${JSON.stringify({ 
@@ -77,14 +82,15 @@ export async function POST(request: NextRequest) {
           console.log(`Found ${vectorResults.length} total results, ${meaningfulResults.length} meaningful matches`);
           
           if (!hasGoodMatches) {
-            // Step 3a: AI says "no" - no good matches found
-            console.log('Step 3a: No good matches, letting AI explain...');
+            // Step 3a: AI says "no" - no good matches found (with memory context)
+            console.log('Step 3a: No good matches, letting AI explain with memory context...');
             
             try {
-              const noResultsStream = await EnhancedGroqService.createNoResultsExplanation(
+              const noResultsStream = await EnhancedGroqService.createNoResultsExplanationWithMemory(
                 query,
                 queryAnalysis || `Looking for food related to "${query}"`,
-                vectorResults // Pass all results so AI can see what was close
+                vectorResults, // Pass all results so AI can see what was close
+                conversationHistory // Include conversation history for better suggestions
               );
               
               const reader = noResultsStream.getReader();
@@ -119,12 +125,12 @@ export async function POST(request: NextRequest) {
                 }
               }
             } catch (noResultsError) {
-              console.error('No results explanation error:', noResultsError);
+              console.error('No results explanation with memory error:', noResultsError);
               // Send fallback no results message
               controller.enqueue(encoder.encode(
                 `data: ${JSON.stringify({ 
                   type: 'ai_no_results', 
-                  content: `I couldn't find any dishes in our database that match "${query}". Try describing the cuisine type, cooking method, or main ingredients differently. For example, instead of specific dish names, try "Korean fermented vegetables" or "Thai spicy noodles".`
+                  content: `I couldn't find any dishes in our database that match "${query}". Based on our conversation, try describing the cuisine type, cooking method, or main ingredients differently. For example, instead of specific dish names, try "Korean fermented vegetables" or "Thai spicy noodles".`
                 })}\n\n`
               ));
             }
@@ -143,15 +149,16 @@ export async function POST(request: NextRequest) {
             ));
             
           } else {
-            // Step 3b: We have good matches - create summary
-            console.log('Step 3b: Good matches found, creating AI summary...');
+            // Step 3b: We have good matches - create summary with memory
+            console.log('Step 3b: Good matches found, creating AI summary with memory context...');
             const top3Results = meaningfulResults.slice(0, 3);
             
             try {
-              const summaryStream = await EnhancedGroqService.createEnhancedSummaryWithResults(
+              const summaryStream = await EnhancedGroqService.createEnhancedSummaryWithMemory(
                 query,
                 queryAnalysis || `Looking for food related to "${query}"`,
-                top3Results
+                top3Results,
+                conversationHistory // Include conversation history for personalized summaries
               );
               
               const reader = summaryStream.getReader();
@@ -186,7 +193,7 @@ export async function POST(request: NextRequest) {
                 }
               }
             } catch (summaryError) {
-              console.error('Summary generation error:', summaryError);
+              console.error('Summary generation with memory error:', summaryError);
               // Send fallback summary
               controller.enqueue(encoder.encode(
                 `data: ${JSON.stringify({ 
@@ -219,7 +226,7 @@ export async function POST(request: NextRequest) {
           controller.close();
 
         } catch (error) {
-          console.error('Unified search error:', error);
+          console.error('Unified search with memory error:', error);
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ 
               type: 'error', 
@@ -243,7 +250,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unified search endpoint error:', error);
+    console.error('Unified search with memory endpoint error:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to process unified search' }),
       { 

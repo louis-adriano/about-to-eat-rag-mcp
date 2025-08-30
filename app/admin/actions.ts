@@ -32,7 +32,7 @@ async function requireAdminAccess() {
     }
 
     return { user, adminUser: adminUser[0] };
-  } catch (_error) {
+  } catch {
     throw new Error('Unauthorized: Admin access required');
   }
 }

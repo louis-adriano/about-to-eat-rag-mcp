@@ -1,7 +1,8 @@
+// File: components/agent-chat-interface.tsx
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, ChefHat, Sparkles, MessageCircle, X, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, Loader2, ChefHat, Sparkles, MessageCircle, X, RefreshCw, Archive } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { FoodCard } from './food-card';
@@ -15,6 +16,11 @@ interface ChatMessage {
   searchResults?: SearchResult[];
   isTyping?: boolean;
   type?: 'text' | 'search_results' | 'analysis' | 'error';
+}
+
+interface ConversationHistory {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 interface StreamingResponse {
@@ -37,6 +43,10 @@ export function AgentChatInterface() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  
+  // New state for conversation memory
+  const [conversationHistory, setConversationHistory] = useState<ConversationHistory[]>([]);
+  
   const messageCounterRef = useRef(1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -46,17 +56,52 @@ export function AgentChatInterface() {
     setIsClient(true);
   }, []);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // State to track if user is near bottom of chat
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [userScrolled, setUserScrolled] = useState(false);
+
+  const scrollToBottom = (smooth: boolean = true) => {
+    if (smooth) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ block: 'end' });
+    }
   };
 
+  // Check if user is near bottom of chat container
+  const checkIfNearBottom = () => {
+    if (chatContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+      const nearBottom = scrollHeight - scrollTop - clientHeight < 100; // Within 100px of bottom
+      setShouldAutoScroll(nearBottom);
+      return nearBottom;
+    }
+    return true;
+  };
+
+  // Handle manual scrolling by user
+  const handleScroll = () => {
+    setUserScrolled(true);
+    checkIfNearBottom();
+    
+    // Reset user scrolled flag after a delay
+    setTimeout(() => setUserScrolled(false), 1000);
+  };
+
+  // Only auto-scroll if user hasn't manually scrolled and is near bottom
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (shouldAutoScroll && !userScrolled) {
+      const timeoutId = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages.length, shouldAutoScroll, userScrolled]);
 
   const addMessage = (message: Omit<ChatMessage, 'id' | 'timestamp'>) => {
     messageCounterRef.current += 1;
-    const messageId = `msg-${messageCounterRef.current}-${Math.random().toString(36).substr(2, 9)}`;
+          const messageId = `msg-${messageCounterRef.current}-${Math.random().toString(36).substring(2, 11)}`;
     
     const newMessage: ChatMessage = {
       ...message,
@@ -73,8 +118,10 @@ export function AgentChatInterface() {
     ));
   };
 
+  // Enhanced clear chat that also resets conversation history
   const clearChat = () => {
     messageCounterRef.current = 1;
+    setConversationHistory([]); // Clear conversation memory
     setMessages([
       {
         id: 'welcome-cleared',
@@ -86,10 +133,48 @@ export function AgentChatInterface() {
     ]);
   };
 
-  const handleSendMessage = async () => {
+  // Helper function to build conversation history for API
+  const buildConversationHistory = (newUserMessage: string): ConversationHistory[] => {
+    // Get the last 10 meaningful exchanges (excluding typing messages and system messages)
+    const meaningfulMessages = messages.filter(msg => 
+      !msg.isTyping && 
+      msg.type === 'text' && 
+      !msg.id.includes('welcome') &&
+      msg.content.trim().length > 0
+    ).slice(-20); // Last 20 messages = ~10 exchanges
+
+    // Convert to conversation history format
+    const history: ConversationHistory[] = meaningfulMessages.map(msg => ({
+      role: msg.role === 'agent' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+
+    // Add the new user message
+    history.push({
+      role: 'user',
+      content: newUserMessage
+    });
+
+    return history;
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    // Prevent any form submission behavior
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!input.trim() || isLoading) return;
 
     const userMessage = input.trim();
+    
+    // Preserve scroll position and viewport
+    const scrollContainer = chatContainerRef.current;
+    const currentScrollTop = scrollContainer?.scrollTop || 0;
+    const currentScrollLeft = scrollContainer?.scrollLeft || 0;
+    
+    // Clear input without losing focus
     setInput('');
     
     // Add user message
@@ -98,6 +183,10 @@ export function AgentChatInterface() {
       content: userMessage,
       type: 'text'
     });
+
+    // Build conversation history including the new message
+    const newConversationHistory = buildConversationHistory(userMessage);
+    setConversationHistory(newConversationHistory);
 
     // Add initial agent typing message
     const agentMessageId = addMessage({
@@ -109,12 +198,30 @@ export function AgentChatInterface() {
 
     setIsLoading(true);
 
+    // Force restore scroll position multiple times to ensure it sticks
+    const restoreScrollPosition = () => {
+      if (scrollContainer) {
+        scrollContainer.scrollTop = currentScrollTop;
+        scrollContainer.scrollLeft = currentScrollLeft;
+      }
+    };
+
+    // Restore immediately and after each frame
+    restoreScrollPosition();
+    requestAnimationFrame(restoreScrollPosition);
+    setTimeout(restoreScrollPosition, 10);
+    setTimeout(restoreScrollPosition, 50);
+    setTimeout(restoreScrollPosition, 100);
+
     try {
-      // Start conversational agent chat
+      // Start conversational agent chat with memory
       const response = await fetch('/api/agent-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: userMessage }),
+        body: JSON.stringify({ 
+          query: userMessage,
+          conversationHistory: newConversationHistory // Include conversation history
+        }),
       });
 
       if (!response.ok) {
@@ -167,13 +274,30 @@ export function AgentChatInterface() {
                 }
                 
               } else if (data.type === 'done') {
+                // Update conversation history with the final agent response
+                if (agentResponse) {
+                  setConversationHistory(prev => [
+                    ...prev.slice(0, -1), // Remove the user message we added earlier
+                    { role: 'user', content: userMessage },
+                    { role: 'assistant', content: agentResponse }
+                  ]);
+                }
+                
                 // If no streaming content was received, provide a fallback response
                 if (!agentResponse && !searchResults?.length) {
+                  const fallbackResponse = "I'd be happy to help you discover some amazing food! Could you tell me more about what you're looking for? For example, a specific cuisine, flavor profile, or type of dish? 😊";
                   updateMessage(agentMessageId, {
-                    content: "I'd be happy to help you discover some amazing food! Could you tell me more about what you're looking for? For example, a specific cuisine, flavor profile, or type of dish? 😊",
+                    content: fallbackResponse,
                     isTyping: false,
                     type: 'text'
                   });
+                  
+                  // Update conversation history with fallback
+                  setConversationHistory(prev => [
+                    ...prev.slice(0, -1),
+                    { role: 'user', content: userMessage },
+                    { role: 'assistant', content: fallbackResponse }
+                  ]);
                 }
               } else if (data.type === 'error') {
                 throw new Error(data.error || 'Unknown error');
@@ -187,20 +311,29 @@ export function AgentChatInterface() {
 
     } catch (error) {
       console.error('Chat error:', error);
+      const errorResponse = "I'm sorry, I encountered an error while searching for food recommendations. Please try again or rephrase your request! I'm here to help. 😊";
       updateMessage(agentMessageId, {
-        content: "I'm sorry, I encountered an error while searching for food recommendations. Please try again or rephrase your request! I'm here to help. 😊",
+        content: errorResponse,
         isTyping: false,
         type: 'error'
       });
+      
+      // Update conversation history with error response
+      setConversationHistory(prev => [
+        ...prev.slice(0, -1),
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: errorResponse }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendMessage();
+      e.stopPropagation();
+      handleSendMessage(e);
     }
   };
 
@@ -223,19 +356,31 @@ export function AgentChatInterface() {
           </div>
           <div>
             <h3 className="font-serif font-semibold text-foreground">Meet Curate</h3>
-            <p className="text-sm text-muted-foreground">Your personal culinary curator</p>
+            <p className="text-sm text-muted-foreground">
+              Your personal culinary curator • {conversationHistory.length > 0 ? `${Math.floor(conversationHistory.length / 2)} exchanges` : 'Ready to chat'}
+            </p>
           </div>
         </div>
         
-        <Button
-          onClick={clearChat}
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Clear Chat
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Memory indicator */}
+          {conversationHistory.length > 0 && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground bg-primary/10 px-2 py-1 rounded-full">
+              <Archive className="w-3 h-3" />
+              <span>Remembering context</span>
+            </div>
+          )}
+          
+          <Button
+            onClick={clearChat}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Clear Chat
+          </Button>
+        </div>
       </div>
 
       {/* Messages Area */}
@@ -342,7 +487,11 @@ export function AgentChatInterface() {
 
       {/* Input Area */}
       <div className="p-6 border-t bg-white rounded-b-3xl">
-        <div className="flex gap-3">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSendMessage(e);
+        }} className="flex gap-3">
           <div className="flex-1">
             <Input
               value={input}
@@ -354,7 +503,7 @@ export function AgentChatInterface() {
             />
           </div>
           <Button
-            onClick={handleSendMessage}
+            type="submit"
             disabled={!input.trim() || isLoading}
             size="lg"
             className="h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90 shadow-md"
@@ -365,7 +514,7 @@ export function AgentChatInterface() {
               <Send className="w-5 h-5" />
             )}
           </Button>
-        </div>
+        </form>
         
         <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
@@ -377,8 +526,8 @@ export function AgentChatInterface() {
             <span>Cultural Insights</span>
           </div>
           <div className="flex items-center gap-1">
-            <MessageCircle className="w-3 h-3" />
-            <span>Natural Conversation</span>
+            <Archive className="w-3 h-3" />
+            <span>Contextual Memory</span>
           </div>
         </div>
       </div>

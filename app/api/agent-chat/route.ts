@@ -1,11 +1,17 @@
+// File: app/api/agent-chat/route.ts
 import { NextRequest } from 'next/server';
 import { searchSimilarFoods } from '../../../lib/vector-db';
-import { EnhancedGroqService } from '../../../lib/enhanced-groq';
-import { SearchResult } from '../../../types/food';
 import { z } from 'zod';
+import Groq from 'groq-sdk';
+
+const ConversationMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+});
 
 const AgentChatSchema = z.object({
   query: z.string().min(1).max(500),
+  conversationHistory: z.array(ConversationMessageSchema).optional().default([]),
 });
 
 export async function POST(request: NextRequest) {
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { query } = AgentChatSchema.parse(body);
+    const { query, conversationHistory } = AgentChatSchema.parse(body);
 
     const encoder = new TextEncoder();
 
@@ -30,7 +36,8 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          console.log(`Starting pure conversational agent for: "${query}"`);
+          console.log(`Starting conversational agent with memory for: "${query}"`);
+          console.log(`Conversation history length: ${conversationHistory.length} messages`);
           
           // Step 1: Check if this is a food-related query and get context
           let foodContext = '';
@@ -50,8 +57,12 @@ export async function POST(request: NextRequest) {
             console.log('Search context failed, continuing with pure conversation:', searchError);
           }
 
-          // Step 2: Create pure conversational AI response
-          const conversationalStream = await createPureConversationalResponse(query, foodContext);
+          // Step 2: Create conversational AI response with memory
+          const conversationalStream = await createConversationalResponseWithMemory(
+            query, 
+            foodContext, 
+            conversationHistory
+          );
           
           const reader = conversationalStream.getReader();
           const decoder = new TextDecoder();
@@ -95,7 +106,7 @@ export async function POST(request: NextRequest) {
           controller.close();
 
         } catch (error) {
-          console.error('Pure agent chat error:', error);
+          console.error('Agent chat with memory error:', error);
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ 
               type: 'chat_response', 
@@ -130,13 +141,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Pure conversational AI response - like talking to Claude
-async function createPureConversationalResponse(
+// Enhanced conversational AI response with memory support
+async function createConversationalResponseWithMemory(
   userQuery: string,
-  foodContext: string
+  foodContext: string,
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>
 ): Promise<ReadableStream> {
   const encoder = new TextEncoder();
-  
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
   if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'dummy-key-for-build') {
     return new ReadableStream({
       start(controller) {
@@ -150,104 +163,79 @@ async function createPureConversationalResponse(
   }
 
   try {
-    const stream = await EnhancedGroqService.createStreamingFoodContext({
-      text: `User question: "${userQuery}". ${foodContext ? `Relevant food context from database: ${foodContext}` : 'No specific food context available.'}`,
-      region: 'Global Food Knowledge',
-      type: 'Conversational Assistant'
-    });
-
-    // Override the system prompt to make it purely conversational
-    const conversationalStream = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: "system",
-            content: `You are a friendly, knowledgeable food expert and personal culinary assistant. You're having a natural conversation with someone about food, cooking, restaurants, cuisines, or anything food-related.
+    // Build messages array with conversation history
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      {
+        role: "system",
+        content: `You are Curate, a friendly, knowledgeable food expert and personal culinary assistant. You're having a natural conversation with someone about food, cooking, restaurants, cuisines, or anything food-related.
 
 Your personality:
 - Warm, enthusiastic, and genuinely helpful
 - Knowledgeable about global cuisines, cooking techniques, and food culture  
 - Conversational and natural - like talking to a friend who loves food
+- You remember previous parts of the conversation and can reference them naturally
 - Use emojis sparingly but naturally
 - Ask follow-up questions to be more helpful
 - Share personal insights and recommendations
+- Build on previous topics and preferences mentioned
 
 Guidelines:
+- Remember what the user has previously mentioned about their preferences, dislikes, or interests
+- Reference previous dishes or cuisines they've asked about when relevant
 - Give detailed, informative responses about food topics
 - If you don't have specific information, be honest but still helpful
 - Suggest alternatives or related topics when appropriate
 - Keep responses conversational, not robotic or overly formal
 - Focus on being genuinely helpful and engaging
+- When appropriate, connect new recommendations to things they've previously shown interest in
 
-${foodContext ? `Context from food database: ${foodContext.substring(0, 500)}` : ''}
+Memory and Context:
+- You can see the conversation history and should use it to provide better, more personalized responses
+- Build on previous conversations naturally without being repetitive
+- If they ask about something similar to a previous topic, acknowledge the connection
 
-Respond naturally and conversationally to the user's food-related question.`
-          },
-          {
-            role: "user",
-            content: userQuery
-          }
-        ],
-        model: "llama3-70b-8192",
-        temperature: 0.7,
-        max_tokens: 500,
-        stream: true,
-      }),
+${foodContext ? `Current food database context: ${foodContext.substring(0, 500)}` : ''}
+
+Respond naturally and conversationally, taking into account the full conversation context.`
+      }
+    ];
+
+    // Add conversation history (limit to last 20 messages to avoid token limits)
+    const recentHistory = conversationHistory.slice(-20);
+    messages.push(...recentHistory);
+
+    // Add the current user query
+    messages.push({
+      role: "user",
+      content: userQuery
     });
 
-    if (!conversationalStream.ok) {
-      throw new Error('Groq API request failed');
-    }
+    const conversationalStream = await groq.chat.completions.create({
+      messages: messages,
+      model: "llama3-70b-8192",
+      temperature: 0.7,
+      max_tokens: 600,
+      stream: true,
+    });
 
+    // Process the stream
+    const encoder = new TextEncoder();
+    
     return new ReadableStream({
       async start(controller) {
         try {
-          const reader = conversationalStream.body?.getReader();
-          if (!reader) throw new Error('No reader available');
-          
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') {
-                  controller.enqueue(encoder.encode('data: {"done": true}\n\n'));
-                  controller.close();
-                  return;
-                }
-
-                try {
-                  const parsed = JSON.parse(data);
-                  const content = parsed.choices?.[0]?.delta?.content || '';
-                  
-                  if (content) {
-                    controller.enqueue(encoder.encode(
-                      `data: ${JSON.stringify({ content })}\n\n`
-                    ));
-                  }
-                } catch (parseError) {
-                  // Skip invalid JSON
-                }
-              }
+          for await (const chunk of conversationalStream) {
+            const content = chunk.choices[0]?.delta?.content || '';
+            if (content) {
+              controller.enqueue(encoder.encode(
+                `data: ${JSON.stringify({ content })}\n\n`
+              ));
             }
           }
-          
           controller.enqueue(encoder.encode('data: {"done": true}\n\n'));
           controller.close();
         } catch (error) {
-          console.error('Conversational streaming error:', error);
+          console.error('Conversational streaming with memory error:', error);
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ 
               content: "I'm having trouble responding right now. Could you try asking again?" 
@@ -260,7 +248,7 @@ Respond naturally and conversationally to the user's food-related question.`
     });
 
   } catch (error) {
-    console.error('Pure conversational response creation error:', error);
+    console.error('Conversational response with memory creation error:', error);
     throw error;
   }
 }
