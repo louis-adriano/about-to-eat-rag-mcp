@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChefHat, Heart, Home, Info, Github, Settings } from 'lucide-react';
-import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
-import { useUser as useClerkUser } from '@clerk/clerk-react'; // or correct import path
+import { ChefHat, Heart, Home, Info, Github, Settings, MessageCircle } from 'lucide-react';
+import { SignInButton, UserButton } from '@clerk/nextjs';
+import { useUser } from '@clerk/clerk-react';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -12,7 +12,7 @@ export function Navbar() {
   // Check if Clerk is properly configured
   const hasClerkKeys = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   
-  const clerkUser = useClerkUser();
+  const clerkUser = useUser();
   const isSignedIn = !!clerkUser.isSignedIn; // ensures boolean
 
   const isActive = (path: string) => pathname === path;
@@ -46,6 +46,16 @@ export function Navbar() {
               }`}
             >
               Discover
+            </Link>
+            <Link
+              href="/agent"
+              className={`text-sm font-medium transition-colors ${
+                isActive('/agent')
+                  ? 'text-primary'
+                  : 'text-foreground hover:text-primary'
+              }`}
+            >
+              Agent
             </Link>
             <Link
               href="/about"
@@ -84,6 +94,16 @@ export function Navbar() {
                 }`}
               >
                 <Home className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/agent"
+                className={`p-2 rounded-lg transition-colors ${
+                  isActive('/agent')
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-primary/5'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4" />
               </Link>
               <Link
                 href="/about"
