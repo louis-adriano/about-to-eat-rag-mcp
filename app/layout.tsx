@@ -21,6 +21,12 @@ export const metadata: Metadata = {
   description: 'Discover amazing foods from around the world using AI-powered semantic search. Find dishes by describing flavors, ingredients, or cuisine types.',
   keywords: ['food discovery', 'culinary search', 'AI search', 'international cuisine', 'recipe finder', 'semantic search'],
   authors: [{ name: 'About To Eat Team' }],
+  // Add favicon here
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>",
+    shortcut: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>",
+    apple: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>",
+  },
 }
 
 // Add viewport export to fix the warning
