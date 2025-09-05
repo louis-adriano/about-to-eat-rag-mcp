@@ -1,11 +1,8 @@
-// File: lib/enhanced-groq.ts (Updated with memory support)
-// lib/enhanced-groq.ts
 import Groq from 'groq-sdk';
 import { MemoryService } from './memory-service';
 import { ConversationMessage } from '../types/conversation';
 import { GROQ_MODELS } from './model-config';
 
-// Initialize Groq client with fallback for build time
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || 'dummy-key-for-build',
 });
@@ -33,18 +30,120 @@ export interface SearchResult {
   score: number;
 }
 
+interface StrictFilters {
+  spiceLevel: 'none' | 'mild' | 'moderate' | 'spicy' | 'very-spicy' | null;
+  excludeSpicy: boolean;
+  excludeSweet: boolean;
+  excludeFermented: boolean;
+  requiredCuisine: string | null;
+  excludedIngredients: string[];
+  requiredIngredients: string[];
+  textureRequirements: string[];
+}
+
+function parseStrictRequirements(query: string): StrictFilters {
+  const lowerQuery = query.toLowerCase();
+  
+  const filters: StrictFilters = {
+    spiceLevel: null,
+    excludeSpicy: false,
+    excludeSweet: false,
+    excludeFermented: false,
+    requiredCuisine: null,
+    excludedIngredients: [],
+    requiredIngredients: [],
+    textureRequirements: []
+  };
+
+  if (lowerQuery.includes('not spicy') || lowerQuery.includes('no spice') || lowerQuery.includes('mild only')) {
+    filters.excludeSpicy = true;
+    filters.spiceLevel = 'mild';
+  }
+  if (lowerQuery.includes('very spicy') || lowerQuery.includes('extremely spicy')) {
+    filters.spiceLevel = 'very-spicy';
+  }
+  if (lowerQuery.includes('moderately spicy') || lowerQuery.includes('medium spice')) {
+    filters.spiceLevel = 'moderate';
+  }
+
+  if (lowerQuery.includes('not sweet') || lowerQuery.includes('no sugar')) {
+    filters.excludeSweet = true;
+  }
+  if (lowerQuery.includes('not fermented') || lowerQuery.includes('no fermentation')) {
+    filters.excludeFermented = true;
+  }
+
+  const cuisines = ['korean', 'chinese', 'japanese', 'thai', 'italian', 'mexican', 'indian', 'french'];
+  for (const cuisine of cuisines) {
+    if (lowerQuery.includes(cuisine)) {
+      filters.requiredCuisine = cuisine;
+      break;
+    }
+  }
+
+  if (lowerQuery.includes('must have') || lowerQuery.includes('needs to have')) {
+    const ingredientMatches = lowerQuery.match(/(?:must have|needs to have|with) ([a-z\s]+)/g);
+    if (ingredientMatches) {
+      filters.requiredIngredients = ingredientMatches.map(match => 
+        match.replace(/^(?:must have|needs to have|with)\s+/, '').trim()
+      );
+    }
+  }
+
+  return filters;
+}
+
+function strictFilterResults(results: SearchResult[], filters: StrictFilters, originalQuery: string): SearchResult[] {
+  return results.filter(result => {
+    const text = result.text.toLowerCase();
+    const region = result.region.toLowerCase();
+    
+    if (filters.excludeSpicy) {
+      if (text.includes('spicy') || text.includes('hot') || text.includes('chili') || 
+          text.includes('pepper') || text.includes('fiery') || text.includes('burning')) {
+        return false;
+      }
+    }
+
+    if (filters.excludeSweet) {
+      if (text.includes('sweet') || text.includes('sugar') || text.includes('honey') || 
+          text.includes('syrup') || text.includes('dessert')) {
+        return false;
+      }
+    }
+
+    if (filters.excludeFermented) {
+      if (text.includes('fermented') || text.includes('pickled') || text.includes('aged') || 
+          text.includes('kimchi') || text.includes('sauerkraut') || text.includes('miso')) {
+        return false;
+      }
+    }
+
+    if (filters.requiredCuisine) {
+      if (!region.includes(filters.requiredCuisine) && !text.includes(filters.requiredCuisine)) {
+        return false;
+      }
+    }
+
+    if (filters.requiredIngredients.length > 0) {
+      const hasAllRequired = filters.requiredIngredients.every(ingredient => 
+        text.includes(ingredient.toLowerCase())
+      );
+      if (!hasAllRequired) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
 export class EnhancedGroqService {
   
-  /**
-   * Check if Groq API key is available
-   */
   private static isApiKeyAvailable(): boolean {
     return !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== 'dummy-key-for-build');
   }
 
-  /**
-   * NEW: Create conversational response with memory support
-   */
   static async createConversationalResponseWithMemory(
     userQuery: string,
     foodContext: string,
@@ -64,15 +163,11 @@ export class EnhancedGroqService {
     }
 
     try {
-      // Extract conversation context for personalization
       const context = MemoryService.extractConversationContext(conversationHistory);
       const contextSummary = MemoryService.generateContextSummary(context);
       const personalizationContext = MemoryService.generatePersonalizedContext(userQuery, context);
-
-      // Build optimized conversation history
       const optimizedHistory = MemoryService.optimizeConversationHistory(conversationHistory, 16);
       
-      // Build messages array
       const messages: Array<{role: 'system' | 'user' | 'assistant'; content: string}> = [
         {
           role: "system",
@@ -113,7 +208,6 @@ Respond naturally and conversationally, taking into account the full conversatio
         }
       ];
 
-      // Add optimized conversation history
       optimizedHistory.forEach(msg => {
         messages.push({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
@@ -121,7 +215,6 @@ Respond naturally and conversationally, taking into account the full conversatio
         });
       });
 
-      // Add current query
       messages.push({
         role: "user",
         content: userQuery
@@ -168,9 +261,6 @@ Respond naturally and conversationally, taking into account the full conversatio
     }
   }
 
-  /**
-   * NEW: Create explanation when no good results are found (with memory context)
-   */
   static async createNoResultsExplanationWithMemory(
     originalQuery: string,
     queryAnalysis: string,
@@ -183,7 +273,7 @@ Respond naturally and conversationally, taking into account the full conversatio
         start(controller) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
             type: 'no_results_content',
-            content: `I couldn't find any dishes in our database that match "${originalQuery}". Try describing the cuisine type, cooking method, or main ingredients differently.`
+            content: `No dishes in our database match your strict requirements for "${originalQuery}". Try broadening your search terms.`
           })}\n\n`));
           controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
           controller.close();
@@ -192,16 +282,14 @@ Respond naturally and conversationally, taking into account the full conversatio
     }
 
     try {
-      // Extract conversation context for better suggestions
       const context = MemoryService.extractConversationContext(conversationHistory);
       
-      // Analyze what was closest if we have any results
       let closestResults = '';
       if (allResults.length > 0) {
         const top3Closest = allResults.slice(0, 3);
         closestResults = top3Closest.map((result, index) => {
           const dishName = this.extractDishName(result.text);
-          return `${index + 1}. ${dishName} (${result.region}) - ${(result.score * 100).toFixed(0)}% match`;
+          return `${index + 1}. ${dishName} (${result.region}) - ${(result.score * 100).toFixed(0)}% match but doesn't meet your requirements`;
         }).join('\n');
       }
 
@@ -209,15 +297,25 @@ Respond naturally and conversationally, taking into account the full conversatio
         messages: [
           {
             role: "system",
-            content: `You are Curate, a helpful food expert with memory of previous conversations. When you cannot find good matches for a user's food search, use your knowledge of their preferences to provide better suggestions.
+            content: `You are a brutally honest food search assistant. When users have strict requirements that can't be met, tell them the truth clearly and directly.
 
-Structure your response as:
-1. Acknowledge what they were looking for, referencing previous preferences if relevant (1 sentence)
-2. Explain why no good matches were found (1-2 sentences) 
-3. Provide 2-3 specific suggestions for better search terms, incorporating their known preferences
-4. Optional: Suggest exploring related cuisines they've shown interest in
+DO NOT:
+- Make excuses or workarounds ("you could make it less spicy")
+- Suggest modifications ("you could ask for it mild")
+- Compromise their requirements
+- Be overly apologetic
 
-Be encouraging, personal (using conversation memory), and helpful. Keep the tone friendly and supportive, under 150 words total.`
+DO:
+- Be clear and direct about why nothing matched
+- Suggest what IS available that's closest
+- Recommend broader search terms if appropriate
+- Keep it under 100 words and friendly but honest
+
+Structure:
+1. Direct statement that nothing matched their requirements (1 sentence)
+2. Brief explanation why (1 sentence)
+3. What's closest/available instead (2-3 options max)
+4. Suggestion for broader search if appropriate`
           },
           {
             role: "user",
@@ -225,20 +323,19 @@ Be encouraging, personal (using conversation memory), and helpful. Keep the tone
 
 What they were looking for: ${queryAnalysis}
 
-${closestResults ? `Closest matches found (but with low relevance):
-${closestResults}` : 'No relevant matches found in the database.'}
+${closestResults ? `Closest matches found (but don't meet requirements):
+${closestResults}` : 'No relevant matches found at all.'}
 
 Previous conversation context:
-- Cuisines they've discussed: ${context.mentionedCuisines.join(', ') || 'none'}
-- Food preferences shown: ${context.preferences.join(', ') || 'none'}
-- Recent topics: ${context.discussedTopics.join(', ') || 'none'}
+- Cuisines discussed: ${context.mentionedCuisines.join(', ') || 'none'}
+- Their preferences: ${context.preferences.join(', ') || 'none'}
 
-Help explain why no good matches were found and suggest better search approaches based on their interests and conversation history.`
+Be honest about why nothing matched their requirements. Don't make excuses.`
           }
         ],
         model: GROQ_MODELS.QUICK,
-        temperature: 0.7,
-        max_tokens: 250,
+        temperature: 0.3,
+        max_tokens: 200,
         stream: true,
       });
 
@@ -258,7 +355,7 @@ Help explain why no good matches were found and suggest better search approaches
             controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
             controller.close();
           } catch (error) {
-            console.error('No results explanation with memory streaming error:', error);
+            console.error('Strict no results explanation streaming error:', error);
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
               type: 'error', 
               error: 'No results explanation failed' 
@@ -268,14 +365,11 @@ Help explain why no good matches were found and suggest better search approaches
         },
       });
     } catch (error) {
-      console.error('Enhanced no results explanation with memory error:', error);
+      console.error('Strict no results explanation error:', error);
       throw error;
     }
   }
 
-  /**
-   * Analyze user query and translate for vector search (with memory context)
-   */
   static async analyzeAndTranslateQueryWithMemory(
     userQuery: string,
     conversationHistory: ConversationMessage[]
@@ -293,47 +387,46 @@ Help explain why no good matches were found and suggest better search approaches
     try {
       const context = MemoryService.extractConversationContext(conversationHistory);
       const contextSummary = MemoryService.generateContextSummary(context);
+      const strictFilters = parseStrictRequirements(userQuery);
 
       const completion = await groq.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: `You are a food search expert with memory of previous conversations. Analyze user queries and provide:
+            content: `You are a strict food search analyzer. Your job is to understand EXACTLY what the user wants and create search terms that will find foods matching their EXACT requirements.
 
-1. A brief, engaging analysis of what the user is looking for (1-2 sentences)
-2. An optimized query for vector database search
-3. Key search terms
-4. Search strategy
+Pay special attention to:
+- NEGATIVE requirements ("not spicy", "no meat", "not sweet") - these are ABSOLUTE exclusions
+- POSITIVE requirements ("must be Korean", "needs vegetables") - these are mandatory
+- PREFERENCE indicators ("prefer mild", "like crispy") - these are guidelines
 
-Take into account their previous preferences and interests when analyzing their query.
-
-Focus on:
-- Cuisine types (Korean, Thai, Chinese, etc.)
-- Cooking methods (fermented, grilled, steamed, fried)
-- Food categories (noodles, soup, rice, vegetables)
-- Textures and flavors (spicy, creamy, crispy, sour)
-- Ingredients (beef, pork, vegetables, coconut)
+Be HONEST about what the user is asking for. If they say "not spicy", they mean NO SPICE AT ALL.
 
 Return JSON format:
 {
-  "analysis": "Brief engaging description of what user wants, incorporating memory",
-  "translatedQuery": "optimized search terms",
+  "analysis": "Clear, honest description of what user wants (including restrictions)",
+  "translatedQuery": "optimized search terms that respect their restrictions",
   "keyTerms": ["term1", "term2", "term3"],
   "confidence": 0.8,
-  "searchStrategy": "semantic|ingredient|cuisine|texture|method"
+  "searchStrategy": "strict|semantic|ingredient|cuisine|texture|method",
+  "strictRequirements": {
+    "exclusions": ["spicy", "sweet"],
+    "requirements": ["korean", "vegetarian"],
+    "mustHave": ["vegetables"]
+  }
 }`
           },
           {
             role: "user",
-            content: `Analyze this food search query: "${userQuery}"
+            content: `Analyze this food search query with STRICT attention to their requirements: "${userQuery}"
 
 ${contextSummary ? `Previous conversation context: ${contextSummary}` : 'This is a new conversation.'}
 
-Consider their conversation history when analyzing what they're looking for.`
+Be honest about their restrictions. If they say "not spicy", they mean it.`
           }
         ],
         model: "llama-3.1-8b-instant",
-        temperature: 0.3,
+        temperature: 0.2,
         max_tokens: 400,
         response_format: { type: "json_object" }
       });
@@ -346,28 +439,25 @@ Consider their conversation history when analyzing what they're looking for.`
       const parsed = JSON.parse(response);
       
       return {
-        analysis: parsed.analysis || `Looking for food related to "${userQuery}"`,
+        analysis: parsed.analysis || `Looking for food that strictly matches: "${userQuery}"`,
         translatedQuery: parsed.translatedQuery || userQuery,
         keyTerms: Array.isArray(parsed.keyTerms) ? parsed.keyTerms : userQuery.split(' ').filter(word => word.length > 2),
         confidence: Math.max(0.1, Math.min(1.0, parsed.confidence || 0.7)),
-        searchStrategy: parsed.searchStrategy || 'semantic'
+        searchStrategy: parsed.searchStrategy || 'strict'
       };
 
     } catch (error) {
-      console.error('Query analysis with memory error:', error);
+      console.error('Strict query analysis error:', error);
       return {
-        analysis: `Looking for food related to "${userQuery}"...`,
+        analysis: `Looking for food that strictly matches: "${userQuery}"`,
         translatedQuery: userQuery,
         keyTerms: userQuery.split(' ').filter(word => word.length > 2),
         confidence: 0.6,
-        searchStrategy: 'semantic'
+        searchStrategy: 'strict'
       };
     }
   }
 
-  /**
-   * Create enhanced AI summary with memory context
-   */
   static async createEnhancedSummaryWithMemory(
     originalQuery: string,
     queryAnalysis: string,
@@ -380,7 +470,7 @@ Consider their conversation history when analyzing what they're looking for.`
         start(controller) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
             type: 'summary_content',
-            content: `Based on your search, here are the top matches: ${top3Results.map(r => r.region + ' ' + r.type).join(', ')}.`
+            content: `Found ${top3Results.length} dishes that match your requirements: ${top3Results.map(r => r.region + ' ' + r.type).join(', ')}.`
           })}\n\n`));
           controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
           controller.close();
@@ -392,42 +482,50 @@ Consider their conversation history when analyzing what they're looking for.`
       const context = MemoryService.extractConversationContext(conversationHistory);
       const contextSummary = MemoryService.generateContextSummary(context);
 
-      // Create a concise summary of top 3 results
       const top3Summary = top3Results.map((result, index) => {
         const dishName = this.extractDishName(result.text);
-        return `${index + 1}. **${dishName}** (${result.region}) - ${result.type.toLowerCase()} with ${(result.score * 100).toFixed(0)}% match`;
+        return `${index + 1}. **${dishName}** (${result.region}) - ${(result.score * 100).toFixed(0)}% match`;
       }).join('\n');
 
       const stream = await groq.chat.completions.create({
         messages: [
           {
             role: "system",
-            content: `You are Curate, a food expert with memory of previous conversations. Create concise, engaging summaries that reference conversation history when relevant.
+            content: `You are a precise food search assistant. Create summaries that:
 
-Structure your response as:
-1. Brief interpretation of what the user wants, connecting to previous preferences if relevant (1 sentence)
-2. Top 3 matching dishes with brief highlights and connections to their interests
-3. Short cultural insight or recommendation, potentially building on previous discussions (1-2 sentences)
+1. Confirm these results actually match what the user asked for
+2. Highlight why each dish fits their requirements
+3. Be specific about what makes them good matches
+4. Reference conversation history when relevant
+5. Keep it concise (under 150 words)
 
-Use conversation memory to make personal connections and suggestions. Keep it conversational, informative, and under 180 words total. Use the exact dish information provided.`
+DO NOT:
+- Suggest modifications to dishes
+- Apologize for spice levels if they didn't ask for non-spicy
+- Make assumptions about what they might want
+
+DO:
+- Confirm these dishes meet their stated requirements
+- Explain why they're good matches
+- Connect to their previous interests if relevant`
           },
           {
             role: "user",
             content: `User searched for: "${originalQuery}"
 
-Initial analysis: ${queryAnalysis}
+Analysis: ${queryAnalysis}
 
-Top 3 matching results:
+Top 3 matching results that passed strict filtering:
 ${top3Summary}
 
-${contextSummary ? `Previous conversation context: ${contextSummary}` : 'This is a new conversation.'}
+${contextSummary ? `Previous conversation: ${contextSummary}` : 'New conversation.'}
 
-Create a personalized summary highlighting these specific dishes with brief cultural context, incorporating their conversation history and preferences when relevant.`
+Create a summary confirming these dishes match their requirements and explaining why.`
           }
         ],
         model: "llama-3.1-8b-instant",
-        temperature: 0.7,
-        max_tokens: 300,
+        temperature: 0.4,
+        max_tokens: 250,
         stream: true,
       });
 
@@ -447,7 +545,7 @@ Create a personalized summary highlighting these specific dishes with brief cult
             controller.enqueue(encoder.encode('data: {"type": "done"}\n\n'));
             controller.close();
           } catch (error) {
-            console.error('Summary with memory streaming error:', error);
+            console.error('Strict summary streaming error:', error);
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ 
               type: 'error', 
               error: 'Summary stream failed' 
@@ -457,46 +555,31 @@ Create a personalized summary highlighting these specific dishes with brief cult
         },
       });
     } catch (error) {
-      console.error('Enhanced summary with memory creation error:', error);
+      console.error('Strict summary creation error:', error);
       throw error;
     }
   }
 
-  /**
-   * Create explanation when no good results are found
-   */
   static async createNoResultsExplanation(
     originalQuery: string,
     queryAnalysis: string,
     allResults: SearchResult[]
   ): Promise<ReadableStream> {
-    // Keep existing implementation for backward compatibility
     return this.createNoResultsExplanationWithMemory(originalQuery, queryAnalysis, allResults, []);
   }
 
-  /**
-   * Analyze user query and translate for vector search
-   */
   static async analyzeAndTranslateQuery(userQuery: string): Promise<QueryAnalysisResult> {
-    // Keep existing implementation for backward compatibility
     return this.analyzeAndTranslateQueryWithMemory(userQuery, []);
   }
 
-  /**
-   * Create enhanced AI summary with top 3 results integration
-   */
   static async createEnhancedSummaryWithResults(
     originalQuery: string,
     queryAnalysis: string,
     top3Results: SearchResult[]
   ): Promise<ReadableStream> {
-    // Keep existing implementation for backward compatibility
     return this.createEnhancedSummaryWithMemory(originalQuery, queryAnalysis, top3Results, []);
   }
 
-  /**
-   * Translate user query into vector search optimized terms
-   */
   static async translateQueryForVectorSearch(userQuery: string): Promise<QueryTranslation> {
     if (!this.isApiKeyAvailable()) {
       return {
@@ -553,7 +636,6 @@ Create a personalized summary highlighting these specific dishes with brief cult
 
       const parsed = JSON.parse(response) as QueryTranslation;
       
-      // Validate the response
       if (!parsed.translatedQuery || !Array.isArray(parsed.keyTerms)) {
         throw new Error('Invalid translation format');
       }
@@ -567,7 +649,6 @@ Create a personalized summary highlighting these specific dishes with brief cult
 
     } catch (error) {
       console.error('Query translation error:', error);
-      // Return fallback translation
       return {
         translatedQuery: userQuery,
         keyTerms: userQuery.split(' ').filter(word => word.length > 2),
@@ -577,9 +658,6 @@ Create a personalized summary highlighting these specific dishes with brief cult
     }
   }
 
-  /**
-   * Create streaming food context (for individual food items)
-   */
   static async createStreamingFoodContext(foodItem: { text: string; region: string; type: string }): Promise<ReadableStream> {
     if (!this.isApiKeyAvailable()) {
       const encoder = new TextEncoder();
@@ -645,9 +723,6 @@ Create a personalized summary highlighting these specific dishes with brief cult
     }
   }
 
-  /**
-   * Generate enhanced search suggestions based on user input and conversation history
-   */
   static async generateEnhancedSuggestionsWithMemory(
     partialQuery: string,
     conversationHistory: ConversationMessage[]
@@ -700,16 +775,10 @@ Generate suggestions that build on their interests and preferences.`
     }
   }
 
-  /**
-   * Generate enhanced search suggestions based on user input (backward compatibility)
-   */
   static async generateEnhancedSuggestions(partialQuery: string): Promise<string[]> {
     return this.generateEnhancedSuggestionsWithMemory(partialQuery, []);
   }
 
-  /**
-   * Create unified food analysis with streaming response and query translation
-   */
   static async createUnifiedFoodAnalysis(userQuery: string): Promise<ReadableStream> {
     if (!this.isApiKeyAvailable()) {
       const encoder = new TextEncoder();
@@ -732,10 +801,8 @@ Generate suggestions that build on their interests and preferences.`
     }
 
     try {
-      // First, get query translation for vector search
       const translationPromise = this.translateQueryForVectorSearch(userQuery);
 
-      // Start streaming analysis
       const stream = await groq.chat.completions.create({
         messages: [
           {
@@ -770,7 +837,6 @@ Generate suggestions that build on their interests and preferences.`
       return new ReadableStream({
         async start(controller) {
           try {
-            // Get query translation in parallel
             let translationSent = false;
             
             translationPromise.then(translation => {
@@ -788,7 +854,6 @@ Generate suggestions that build on their interests and preferences.`
               }
             }).catch(err => {
               console.error('Translation error:', err);
-              // Send fallback translation
               if (!translationSent) {
                 controller.enqueue(encoder.encode(
                   `data: ${JSON.stringify({
@@ -803,7 +868,6 @@ Generate suggestions that build on their interests and preferences.`
               }
             });
 
-            // Stream the AI analysis
             for await (const chunk of stream) {
               const content = chunk.choices[0]?.delta?.content || '';
               if (content) {
@@ -813,7 +877,6 @@ Generate suggestions that build on their interests and preferences.`
               }
             }
             
-            // Ensure translation was sent
             const translation = await translationPromise.catch(() => ({
               translatedQuery: userQuery,
               keyTerms: userQuery.split(' ').filter(word => word.length > 2),
@@ -851,19 +914,14 @@ Generate suggestions that build on their interests and preferences.`
     }
   }
 
-  /**
-   * Helper method to extract dish names from descriptions
-   */
   private static extractDishName(text: string): string {
-    // Look for dish names at the beginning of descriptions
     const sentences = text.split('.');
     const firstSentence = sentences[0];
     
-    // Common patterns for dish names
     const patterns = [
-      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+is\s+/,  // "Kimchi is a..."
-      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+features\s+/, // "Pad Thai features..."
-      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+are\s+/, // "Dumplings are..."
+      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+is\s+/,
+      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+features\s+/,
+      /^([A-Z][a-z]+(?:\s+[a-z]+)*)\s+are\s+/,
     ];
     
     for (const pattern of patterns) {
@@ -873,7 +931,6 @@ Generate suggestions that build on their interests and preferences.`
       }
     }
     
-    // Fallback: take first 1-3 words if they look like a dish name
     const words = firstSentence.split(' ');
     if (words.length >= 2 && words[0][0] === words[0][0].toUpperCase()) {
       return words.slice(0, Math.min(3, words.length)).join(' ');

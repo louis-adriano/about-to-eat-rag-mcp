@@ -1,4 +1,3 @@
-// app/api/health/models/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { GROQ_MODELS, testModel } from '../../../../lib/model-config';
 import Groq from 'groq-sdk';

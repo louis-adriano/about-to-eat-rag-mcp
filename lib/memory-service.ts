@@ -1,4 +1,3 @@
-// File: lib/memory-service.ts
 import { ConversationMessage, ConversationContext } from '../types/conversation';
 
 export class MemoryService {

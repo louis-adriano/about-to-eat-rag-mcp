@@ -1,5 +1,3 @@
-// lib/vector-db.ts - Hybrid approach keeping sophistication but fixing scoring
-
 import { Index } from '@upstash/vector';
 import { FoodItem, SearchResult, SearchResultWithVector, VectorData } from '../types/food';
 

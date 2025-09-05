@@ -1,4 +1,3 @@
-// File: app/api/agent-chat/route.ts
 import { NextRequest } from 'next/server';
 import { searchSimilarFoods } from '../../../lib/vector-db';
 import { z } from 'zod';

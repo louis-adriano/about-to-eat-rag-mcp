@@ -1,13 +1,10 @@
-// File: app/agent/page.tsx (Updated with memory features)
 'use client';
 
 import { AgentChatInterface } from '../../components/agent-chat-interface';
 import { Bot, Sparkles, MessageCircle, Search, Brain, Archive } from 'lucide-react';
 
 export default function AgentPage() {
-  // REMOVED: useEffect that was calling window.scrollTo(0, 0)
-  // This was likely causing the page to jump to top!
-  
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-secondary/5">
       {/* Hero Section */}

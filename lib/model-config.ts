@@ -1,4 +1,3 @@
-// lib/model-config.ts
 export const GROQ_MODELS = {
   // Main conversation model - for complex, detailed responses
   CONVERSATION: 'llama-3.3-70b-versatile',

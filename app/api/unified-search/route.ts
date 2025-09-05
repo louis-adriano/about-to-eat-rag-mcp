@@ -1,9 +1,8 @@
-// File: app/api/unified-search/route.ts (Updated with memory support)
 import { NextRequest } from 'next/server';
 import { searchSimilarFoods } from '../../../lib/vector-db';
 import { EnhancedGroqService } from '../../../lib/enhanced-groq';
 import { GROQ_MODELS } from '../../../lib/model-config';
-import { ConversationMessage } from '../../../types/conversation';
+import { SearchResult } from '../../../types/food';
 import { z } from 'zod';
 
 const ConversationMessageSchema = z.object({
@@ -15,6 +14,94 @@ const UnifiedSearchSchema = z.object({
   query: z.string().min(1).max(500),
   conversationHistory: z.array(ConversationMessageSchema).optional().default([]),
 });
+
+interface StrictFilters {
+  excludeSpicy: boolean;
+  excludeSweet: boolean;
+  excludeFermented: boolean;
+  requiredCuisine: string | null;
+  spiceLevel: string | null;
+}
+
+function parseStrictRequirements(query: string): StrictFilters {
+  const lowerQuery = query.toLowerCase();
+  
+  return {
+    excludeSpicy: lowerQuery.includes('not spicy') || lowerQuery.includes('no spice') || lowerQuery.includes('mild only') || lowerQuery.includes('non-spicy'),
+    excludeSweet: lowerQuery.includes('not sweet') || lowerQuery.includes('no sugar') || lowerQuery.includes('savory only'),
+    excludeFermented: lowerQuery.includes('not fermented') || lowerQuery.includes('no fermentation') || lowerQuery.includes('fresh only'),
+    requiredCuisine: extractRequiredCuisine(lowerQuery),
+    spiceLevel: extractSpiceLevel(lowerQuery)
+  };
+}
+
+function extractRequiredCuisine(query: string): string | null {
+  const cuisines = ['korean', 'chinese', 'japanese', 'thai', 'italian', 'mexican', 'indian', 'french', 'vietnamese', 'mediterranean'];
+  
+  for (const cuisine of cuisines) {
+    if (query.includes(cuisine)) {
+      return cuisine;
+    }
+  }
+  return null;
+}
+
+function extractSpiceLevel(query: string): string | null {
+  if (query.includes('very spicy') || query.includes('extremely spicy')) return 'very-spicy';
+  if (query.includes('moderately spicy') || query.includes('medium spice')) return 'moderate';
+  if (query.includes('mildly spicy') || query.includes('little spice')) return 'mild';
+  if (query.includes('not spicy') || query.includes('no spice')) return 'none';
+  return null;
+}
+
+function strictFilterResults(results: SearchResult[], filters: StrictFilters, originalQuery: string): SearchResult[] {
+  console.log(`Applying strict filters to ${results.length} results:`, filters);
+  
+  const filtered = results.filter(result => {
+    const text = result.text.toLowerCase();
+    const region = result.region.toLowerCase();
+    
+    // STRICT spice filtering - if they said "not spicy", exclude ANYTHING with spice mentions
+    if (filters.excludeSpicy) {
+      const spiceWords = ['spicy', 'hot', 'chili', 'pepper', 'fiery', 'burning', 'jalapeño', 'habanero', 'cayenne', 'sriracha', 'gochujang'];
+      if (spiceWords.some(word => text.includes(word))) {
+        console.log(`Filtered out "${result.text.substring(0, 50)}..." - contains spice words`);
+        return false;
+      }
+    }
+
+    // STRICT sweet filtering
+    if (filters.excludeSweet) {
+      const sweetWords = ['sweet', 'sugar', 'honey', 'syrup', 'dessert', 'candy', 'cake', 'chocolate'];
+      if (sweetWords.some(word => text.includes(word))) {
+        console.log(`Filtered out "${result.text.substring(0, 50)}..." - contains sweet words`);
+        return false;
+      }
+    }
+
+    // STRICT fermented filtering
+    if (filters.excludeFermented) {
+      const fermentedWords = ['fermented', 'pickled', 'aged', 'kimchi', 'sauerkraut', 'miso', 'yogurt', 'kefir', 'tempeh'];
+      if (fermentedWords.some(word => text.includes(word))) {
+        console.log(`Filtered out "${result.text.substring(0, 50)}..." - contains fermented words`);
+        return false;
+      }
+    }
+
+    // STRICT cuisine requirement
+    if (filters.requiredCuisine) {
+      if (!region.includes(filters.requiredCuisine) && !text.includes(filters.requiredCuisine)) {
+        console.log(`Filtered out "${result.text.substring(0, 50)}..." - not ${filters.requiredCuisine} cuisine`);
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  console.log(`Strict filtering: ${results.length} -> ${filtered.length} results remaining`);
+  return filtered;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,12 +125,16 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          console.log(`Starting enhanced unified search with memory for: "${query}"`);
+          console.log(`Starting STRICT unified search with memory for: "${query}"`);
           console.log(`Conversation history length: ${conversationHistory.length} messages`);
           
-          // Step 1: AI Query Analysis and Translation with Memory
-          console.log('Step 1: Analyzing and translating query with conversation context...');
-          let translatedQuery = query; // fallback
+          // Parse strict requirements from the query
+          const strictFilters = parseStrictRequirements(query);
+          console.log('Detected strict filters:', strictFilters);
+          
+          // Step 1: AI Query Analysis and Translation with Memory (now with strict awareness)
+          console.log('Step 1: Analyzing query with strict requirements...');
+          let translatedQuery = query;
           let queryAnalysis = null;
           
           try {
@@ -54,7 +145,7 @@ export async function POST(request: NextRequest) {
             translatedQuery = analysisResult.translatedQuery;
             queryAnalysis = analysisResult.analysis;
             
-            // Stream the enhanced analysis with memory context
+            // Stream the enhanced analysis
             controller.enqueue(encoder.encode(
               `data: ${JSON.stringify({ 
                 type: 'analysis', 
@@ -62,36 +153,40 @@ export async function POST(request: NextRequest) {
               })}\n\n`
             ));
           } catch (error) {
-            console.error('Query analysis with memory error:', error);
+            console.error('Query analysis with strict filtering error:', error);
             // Send fallback analysis
             controller.enqueue(encoder.encode(
               `data: ${JSON.stringify({ 
                 type: 'analysis', 
-                content: `Looking for food related to "${query}"...` 
+                content: `Searching for foods that strictly match: "${query}"` 
               })}\n\n`
             ));
           }
 
-          // Step 2: Vector Search
+          // Step 2: Vector Search (get more results for filtering)
           console.log(`Step 2: Performing vector search with: "${translatedQuery}"`);
-          const vectorResults = await searchSimilarFoods(translatedQuery, 8);
+          const vectorResults: SearchResult[] = await searchSimilarFoods(translatedQuery, 20); // Get more for filtering
           
-          // Step 3: Check if we have meaningful results
-          const meaningfulResults = vectorResults.filter(result => result.score > 0.1); // 10% threshold
-          const hasGoodMatches = meaningfulResults.length > 0;
+          // Step 3: Apply STRICT filtering
+          console.log('Step 3: Applying strict filtering to results...');
+          const strictlyFilteredResults = strictFilterResults(vectorResults, strictFilters, query);
           
-          console.log(`Found ${vectorResults.length} total results, ${meaningfulResults.length} meaningful matches`);
+          // Step 4: Check if we have meaningful results after strict filtering
+          const finalResults = strictlyFilteredResults.filter(result => result.score > 0.1);
+          const hasGoodMatches = finalResults.length > 0;
+          
+          console.log(`After strict filtering: ${vectorResults.length} -> ${strictlyFilteredResults.length} -> ${finalResults.length} final results`);
           
           if (!hasGoodMatches) {
-            // Step 3a: AI says "no" - no good matches found (with memory context)
-            console.log('Step 3a: No good matches, letting AI explain with memory context...');
+            // Step 4a: No matches after strict filtering - be honest about it
+            console.log('Step 4a: No matches after strict filtering, providing honest explanation...');
             
             try {
               const noResultsStream = await EnhancedGroqService.createNoResultsExplanationWithMemory(
                 query,
-                queryAnalysis || `Looking for food related to "${query}"`,
-                vectorResults, // Pass all results so AI can see what was close
-                conversationHistory // Include conversation history for better suggestions
+                queryAnalysis || `Looking for foods that strictly match "${query}"`,
+                vectorResults.slice(0, 5), // Show what was close before filtering
+                conversationHistory
               );
               
               const reader = noResultsStream.getReader();
@@ -126,12 +221,12 @@ export async function POST(request: NextRequest) {
                 }
               }
             } catch (noResultsError) {
-              console.error('No results explanation with memory error:', noResultsError);
-              // Send fallback no results message
+              console.error('No results explanation error:', noResultsError);
+              // Send honest fallback message
               controller.enqueue(encoder.encode(
                 `data: ${JSON.stringify({ 
                   type: 'ai_no_results', 
-                  content: `I couldn't find any dishes in our database that match "${query}". Based on our conversation, try describing the cuisine type, cooking method, or main ingredients differently. For example, instead of specific dish names, try "Korean fermented vegetables" or "Thai spicy noodles".`
+                  content: `No dishes in our database match your strict requirements for "${query}". The closest matches didn't meet your criteria. Try broadening your search or removing some restrictions.`
                 })}\n\n`
               ));
             }
@@ -144,22 +239,24 @@ export async function POST(request: NextRequest) {
                   vectorResults: [],
                   originalQuery: query,
                   translatedQuery: translatedQuery,
-                  hasMatches: false
+                  hasMatches: false,
+                  strictlyFiltered: true,
+                  filteredOut: vectorResults.length - finalResults.length
                 }
               })}\n\n`
             ));
             
           } else {
-            // Step 3b: We have good matches - create summary with memory
-            console.log('Step 3b: Good matches found, creating AI summary with memory context...');
-            const top3Results = meaningfulResults.slice(0, 3);
+            // Step 4b: We have good matches after strict filtering
+            console.log('Step 4b: Good matches found after strict filtering, creating summary...');
+            const top3Results = finalResults.slice(0, 3);
             
             try {
               const summaryStream = await EnhancedGroqService.createEnhancedSummaryWithMemory(
                 query,
-                queryAnalysis || `Looking for food related to "${query}"`,
+                queryAnalysis || `Found foods that strictly match "${query}"`,
                 top3Results,
-                conversationHistory // Include conversation history for personalized summaries
+                conversationHistory
               );
               
               const reader = summaryStream.getReader();
@@ -194,32 +291,34 @@ export async function POST(request: NextRequest) {
                 }
               }
             } catch (summaryError) {
-              console.error('Summary generation with memory error:', summaryError);
-              // Send fallback summary
+              console.error('Summary generation error:', summaryError);
+              // Send honest fallback summary
               controller.enqueue(encoder.encode(
                 `data: ${JSON.stringify({ 
                   type: 'ai_summary', 
-                  content: `Found ${meaningfulResults.length} matching dishes based on your search for "${query}". The top results include dishes from ${top3Results.map(r => r.region).join(', ')}.`
+                  content: `Found ${finalResults.length} dishes that strictly match your requirements for "${query}". These results respect your specific criteria.`
                 })}\n\n`
               ));
             }
 
-            // Send meaningful results
+            // Send strictly filtered results (limit to top 8)
             controller.enqueue(encoder.encode(
               `data: ${JSON.stringify({
                 type: 'search_results',
                 results: {
-                  vectorResults: meaningfulResults,
+                  vectorResults: finalResults.slice(0, 8),
                   originalQuery: query,
                   translatedQuery: translatedQuery,
                   top3Results: top3Results,
-                  hasMatches: true
+                  hasMatches: true,
+                  strictlyFiltered: true,
+                  filteredOut: vectorResults.length - finalResults.length
                 }
               })}\n\n`
             ));
           }
 
-          // Step 4: Signal completion
+          // Step 5: Signal completion
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ type: 'done' })}\n\n`
           ));
@@ -227,7 +326,7 @@ export async function POST(request: NextRequest) {
           controller.close();
 
         } catch (error) {
-          console.error('Unified search with memory error:', error);
+          console.error('Strict unified search error:', error);
           controller.enqueue(encoder.encode(
             `data: ${JSON.stringify({ 
               type: 'error', 
@@ -251,9 +350,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Unified search with memory endpoint error:', error);
+    console.error('Strict unified search endpoint error:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to process unified search' }),
+      JSON.stringify({ error: 'Failed to process unified search with strict filtering' }),
       { 
         status: 500, 
         headers: { 'Content-Type': 'application/json' } 
