@@ -7,7 +7,7 @@ export const GROQ_MODELS = {
   QUICK: 'llama-3.1-8b-instant',
   
   // Fallback models in case primary ones fail
-  FALLBACK_CONVERSATION: 'llama-3.1-70b-versatile',
+  FALLBACK_CONVERSATION: 'llama-3.3-70b-versatile', // Updated: was llama-3.1-70b-versatile
   FALLBACK_QUICK: 'llama-3.1-8b-instant',
 } as const;
 

@@ -11,6 +11,7 @@
     "db:studio": "drizzle-kit studio",
     "validate-models": "node scripts/validate-models.mjs",
     "check-models": "node scripts/check-models.mjs",
+    "test-models": "npm run validate-models && npm run check-models",
     "health-check": "curl http://localhost:3000/api/health/models"
   },
   "dependencies": {
