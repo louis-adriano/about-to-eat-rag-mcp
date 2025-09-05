@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { searchSimilarFoods } from '../../../lib/vector-db';
 import { z } from 'zod';
 import Groq from 'groq-sdk';
+import { GROQ_MODELS } from '../../../lib/model-config';
 
 const ConversationMessageSchema = z.object({
   role: z.enum(['user', 'assistant']),
@@ -212,7 +213,7 @@ Respond naturally and conversationally, taking into account the full conversatio
 
     const conversationalStream = await groq.chat.completions.create({
       messages: messages,
-      model: "llama3-70b-8192",
+      model: GROQ_MODELS.CONVERSATION,
       temperature: 0.7,
       max_tokens: 600,
       stream: true,

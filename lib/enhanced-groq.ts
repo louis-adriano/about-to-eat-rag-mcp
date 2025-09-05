@@ -3,6 +3,7 @@
 import Groq from 'groq-sdk';
 import { MemoryService } from './memory-service';
 import { ConversationMessage } from '../types/conversation';
+import { GROQ_MODELS } from './model-config';
 
 // Initialize Groq client with fallback for build time
 const groq = new Groq({
@@ -128,7 +129,7 @@ Respond naturally and conversationally, taking into account the full conversatio
 
       const stream = await groq.chat.completions.create({
         messages: messages,
-        model: "llama3-70b-8192",
+        model: "llama-3.3-70b-versatile",
         temperature: 0.7,
         max_tokens: 600,
         stream: true,
@@ -235,7 +236,7 @@ Previous conversation context:
 Help explain why no good matches were found and suggest better search approaches based on their interests and conversation history.`
           }
         ],
-        model: "llama3-8b-8192",
+        model: GROQ_MODELS.QUICK,
         temperature: 0.7,
         max_tokens: 250,
         stream: true,
@@ -331,7 +332,7 @@ ${contextSummary ? `Previous conversation context: ${contextSummary}` : 'This is
 Consider their conversation history when analyzing what they're looking for.`
           }
         ],
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",
         temperature: 0.3,
         max_tokens: 400,
         response_format: { type: "json_object" }
@@ -424,7 +425,7 @@ ${contextSummary ? `Previous conversation context: ${contextSummary}` : 'This is
 Create a personalized summary highlighting these specific dishes with brief cultural context, incorporating their conversation history and preferences when relevant.`
           }
         ],
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",
         temperature: 0.7,
         max_tokens: 300,
         stream: true,
@@ -539,7 +540,7 @@ Create a personalized summary highlighting these specific dishes with brief cult
             content: `Translate this food query for vector database search: "${userQuery}"`
           }
         ],
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",
         temperature: 0.3,
         max_tokens: 300,
         response_format: { type: "json_object" }
@@ -612,7 +613,7 @@ Create a personalized summary highlighting these specific dishes with brief cult
             content: `Tell me about this fascinating food: ${foodItem.text} from ${foodItem.region}. What makes it special culturally and historically?`
           }
         ],
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",
         temperature: 0.7,
         max_tokens: 300,
         stream: true,
@@ -682,7 +683,7 @@ ${contextSummary ? `User's conversation context: ${contextSummary}` : 'No previo
 Generate suggestions that build on their interests and preferences.`
           }
         ],
-        model: "llama3-8b-8192",
+        model: "llama-3.1-8b-instant",
         temperature: 0.8,
         max_tokens: 250,
         response_format: { type: "json_object" }
@@ -758,7 +759,7 @@ Generate suggestions that build on their interests and preferences.`
             content: `I'm craving: "${userQuery}". Help me understand what I'm looking for and provide insights about these types of foods.`
           }
         ],
-        model: "llama3-70b-8192",
+        model: GROQ_MODELS.CONVERSATION,
         temperature: 0.7,
         max_tokens: 400,
         stream: true,

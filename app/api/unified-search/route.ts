@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server';
 import { searchSimilarFoods } from '../../../lib/vector-db';
 import { EnhancedGroqService } from '../../../lib/enhanced-groq';
+import { GROQ_MODELS } from '../../../lib/model-config';
 import { ConversationMessage } from '../../../types/conversation';
 import { z } from 'zod';
 
