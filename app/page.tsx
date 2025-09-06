@@ -113,43 +113,113 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Discovery Features Section - Mobile Layout */}
+      {/* Coming Soon Section - Recipe Builder Mode */}
       <section className="py-12 sm:py-16 md:py-20 bg-white border-t border-primary/20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-8 sm:mb-12 md:mb-16">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-foreground mb-3 sm:mb-4">
-              Smart Food Discovery
-            </h2>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto px-2">
-              Experience intelligent search that understands your cravings and connects you with authentic flavors from around the world
+          <div className="text-center mb-8 sm:mb-12">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium mb-4">
+              <Sparkles className="w-3 h-3" />
+              Coming Soon
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-3">Recipe Builder Mode</h2>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Turn discovered dishes into step-by-step recipes with AI assistance
             </p>
           </div>
 
-          {/* Stack on mobile, side-by-side on larger screens */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-            <div className="group p-6 sm:p-8 rounded-3xl bg-card/80 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 sm:p-3 bg-primary/20 rounded-2xl">
-                  <Sparkles className="w-5 sm:w-6 h-5 sm:h-6 text-primary" />
+          {/* Mini Interface Preview */}
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-3xl shadow-2xl border overflow-hidden">
+              {/* Mock Header */}
+              <div className="flex items-center justify-between p-4 border-b bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <ChefHat className="w-4 h-4 text-white" />
+                  </div>
+                  <h3 className="font-serif font-semibold text-foreground">Butternut Squash Soup</h3>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-serif font-semibold text-foreground">Intelligent Analysis</h3>
+                <div className="text-xs text-muted-foreground bg-white px-2 py-1 rounded-full">
+                  AI Generated
+                </div>
               </div>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                Our system analyzes your descriptions in real-time, understanding flavors, 
-                textures, and cultural preferences to find exactly what you&apos;re craving.
-              </p>
+
+              {/* Mock Content Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+                {/* Ingredients Section */}
+                <div className="space-y-4">
+                  <h4 className="font-serif font-semibold text-foreground flex items-center gap-2">
+                    <Utensils className="w-4 h-4 text-primary" />
+                    Ingredients
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-xl text-sm">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-muted-foreground">1 large butternut squash</span>
+                      <button className="ml-auto text-xs text-primary hover:text-primary/80">substitute</button>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-xl text-sm">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-muted-foreground">1 yellow onion, diced</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-2 bg-muted/30 rounded-xl text-sm">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-muted-foreground">1 cup coconut milk</span>
+                      <button className="ml-auto text-xs text-primary hover:text-primary/80">substitute</button>
+                    </div>
+                    <div className="text-center py-2">
+                      <div className="text-xs text-muted-foreground">+ 5 more ingredients</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Steps Section */}
+                <div className="space-y-4">
+                  <h4 className="font-serif font-semibold text-foreground flex items-center gap-2">
+                    <Star className="w-4 h-4 text-primary" />
+                    Cooking Steps
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex gap-3 p-3 bg-primary/5 rounded-xl">
+                      <div className="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold">1</div>
+                      <div className="flex-1">
+                        <p className="text-sm text-foreground">Roast squash at 400°F until tender</p>
+                        <p className="text-xs text-muted-foreground mt-1">⏱️ 45 mins</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 p-3 bg-muted/20 rounded-xl opacity-70">
+                      <div className="w-6 h-6 bg-muted-foreground text-white rounded-full flex items-center justify-center text-xs font-bold">2</div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">Sauté onions until golden...</p>
+                        <p className="text-xs text-muted-foreground mt-1">⏱️ 8 mins</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 p-3 bg-muted/20 rounded-xl opacity-50">
+                      <div className="w-6 h-6 bg-muted-foreground text-white rounded-full flex items-center justify-center text-xs font-bold">3</div>
+                      <div className="flex-1">
+                        <p className="text-sm text-muted-foreground">Blend with broth until smooth...</p>
+                      </div>
+                    </div>
+                    <div className="text-center py-2">
+                      <div className="text-xs text-muted-foreground">+ 3 more steps</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mock Footer */}
+              <div className="p-4 bg-muted/20 border-t">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Estimated time: 1 hour 15 mins</span>
+                  <span>Difficulty: Easy</span>
+                  <span>Serves: 6</span>
+                </div>
+              </div>
             </div>
 
-            <div className="group p-6 sm:p-8 rounded-3xl bg-card/80 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-2">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 sm:p-3 bg-primary/20 rounded-2xl">
-                  <Brain className="w-5 sm:w-6 h-5 sm:h-6 text-primary" />
-                </div>
-                <h3 className="text-xl sm:text-2xl font-serif font-semibold text-foreground">Cultural Context</h3>
-              </div>
-              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-                Learn about the rich history, traditions, and stories behind each dish, 
-                enriching your culinary journey with authentic cultural knowledge and background.
+            {/* Subtle Call to Action */}
+            <div className="text-center mt-8">
+              <p className="text-sm text-muted-foreground">
+                Recipe Builder Mode will transform any discovered dish into personalized, step-by-step cooking instructions
               </p>
             </div>
           </div>
