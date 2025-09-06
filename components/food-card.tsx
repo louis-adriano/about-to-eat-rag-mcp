@@ -147,22 +147,23 @@ export function FoodCard({ food, rank }: FoodCardProps) {
   const qualityRating = getQualityRating(validScore);
 
   return (
-    <Card className="group overflow-hidden rounded-3xl bg-card/90 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
-      <CardContent className="p-6">
-        {/* Header with rank and score */}
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-md">
+    <Card className="group overflow-hidden rounded-2xl sm:rounded-3xl bg-card/90 backdrop-blur-sm border shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1 mx-2 sm:mx-0">
+      <CardContent className="p-4 sm:p-6">
+        {/* Header with rank and score - Mobile Optimized */}
+        <div className="flex justify-between items-start mb-3 sm:mb-4 gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 bg-primary text-primary-foreground text-sm font-bold rounded-full shadow-md flex-shrink-0">
               {rank}
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground font-medium">Rank #{rank}</div>
+            <div className="min-w-0">
+              <div className="text-xs sm:text-sm text-muted-foreground font-medium">Rank #{rank}</div>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* Score Display - Responsive */}
             <div className="text-right">
-              <div className={`text-sm font-semibold ${scoreColor}`}>
+              <div className={`text-xs sm:text-sm font-semibold ${scoreColor}`}>
                 {formattedScore}% match
               </div>
               <div className={`text-xs font-medium ${qualityRating.color}`}>
@@ -170,12 +171,12 @@ export function FoodCard({ food, rank }: FoodCardProps) {
               </div>
             </div>
             
-            {/* AI Context Button */}
+            {/* AI Context Button - Mobile Optimized */}
             <Button
               onClick={handleGetStreamingContext}
               variant="outline"
               size="sm"
-              className={`rounded-full border-2 transition-all duration-200 ${
+              className={`rounded-full border-2 transition-all duration-200 h-8 w-8 sm:h-auto sm:w-auto sm:px-3 p-0 sm:p-2 ${
                 isStreaming 
                   ? 'border-destructive/30 bg-destructive/10 hover:bg-destructive/20 text-destructive' 
                   : 'border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary'
@@ -183,60 +184,63 @@ export function FoodCard({ food, rank }: FoodCardProps) {
               title={isStreaming ? "Stop streaming" : "Get AI-powered cultural context"}
             >
               {isStreaming ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
               )}
+              <span className="hidden sm:inline ml-1">
+                {isStreaming ? 'Stop' : 'Context'}
+              </span>
             </Button>
 
-            {/* Stop button when streaming */}
+            {/* Stop button when streaming - Mobile Only */}
             {isStreaming && (
               <Button
                 onClick={handleStopStream}
                 variant="outline"
                 size="sm"
-                className="rounded-full border-2 border-destructive/30 bg-destructive/10 hover:bg-destructive/20 text-destructive"
+                className="rounded-full border-2 border-destructive/30 bg-destructive/10 hover:bg-destructive/20 text-destructive h-8 w-8 p-0 sm:hidden"
                 title="Stop streaming"
               >
-                <StopCircle className="w-4 h-4" />
+                <StopCircle className="w-3 h-3" />
               </Button>
             )}
           </div>
         </div>
 
-        {/* Food description */}
-        <p className="text-foreground text-base leading-relaxed mb-6">
+        {/* Food description - Mobile Optimized Text */}
+        <p className="text-foreground text-sm sm:text-base leading-relaxed mb-4 sm:mb-6">
           {text}
         </p>
 
-        {/* Food metadata */}
-        <div className="flex flex-wrap gap-4 text-sm mb-6">
-          <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 rounded-2xl border border-primary/20">
-            <MapPin className="w-4 h-4 text-primary" />
-            <span className="font-medium text-primary">Region:</span>
-            <span className="text-primary font-semibold">
+        {/* Food metadata - Mobile Responsive Layout */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-sm mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 bg-primary/10 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-primary/20">
+            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+            <span className="font-medium text-primary text-xs sm:text-sm">Region:</span>
+            <span className="text-primary font-semibold text-xs sm:text-sm truncate">
               {region}
             </span>
           </div>
-          <div className="flex items-center gap-2 bg-accent/10 px-3 py-2 rounded-2xl border border-accent/20">
-            <Utensils className="w-4 h-4 text-accent" />
-            <span className="font-medium text-accent">Type:</span>
-            <span className="text-accent font-semibold">
+          <div className="flex items-center gap-2 bg-accent/10 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl border border-accent/20">
+            <Utensils className="w-3 h-3 sm:w-4 sm:h-4 text-accent flex-shrink-0" />
+            <span className="font-medium text-accent text-xs sm:text-sm">Type:</span>
+            <span className="text-accent font-semibold text-xs sm:text-sm truncate">
               {type}
             </span>
           </div>
         </div>
 
-        {/* AI Context Panel with Streaming */}
+        {/* AI Context Panel with Streaming - Mobile Optimized */}
         {showContext && (
-          <Card className="border border-primary/30 bg-primary/5 shadow-lg">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary" />
-                  <h4 className="text-sm font-serif font-semibold text-primary">Cultural Context</h4>
+          <Card className="border border-primary/30 bg-primary/5 shadow-lg mt-4">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                  <h4 className="text-xs sm:text-sm font-serif font-semibold text-primary truncate">Cultural Context</h4>
                   {isStreaming && (
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full animate-pulse">
+                    <span className="text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full animate-pulse flex-shrink-0">
                       Streaming...
                     </span>
                   )}
@@ -245,31 +249,31 @@ export function FoodCard({ food, rank }: FoodCardProps) {
                   onClick={() => setShowContext(false)}
                   variant="ghost"
                   size="sm"
-                  className="rounded-full w-6 h-6 p-0 hover:bg-primary/10 text-primary/60 hover:text-primary"
+                  className="rounded-full w-5 h-5 sm:w-6 sm:h-6 p-0 hover:bg-primary/10 text-primary/60 hover:text-primary flex-shrink-0"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </Button>
               </div>
               
-              <div className="bg-background/90 backdrop-blur-sm rounded-2xl p-4 border border-primary/20">
+              <div className="bg-background/90 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-primary/20">
                 {context ? (
-                  <div className="space-y-3">
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                  <div className="space-y-2 sm:space-y-3">
+                    <p className="text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-wrap">
                       {context}
                       {isStreaming && (
-                        <span className="inline-block w-2 h-4 bg-primary ml-1 animate-pulse" />
+                        <span className="inline-block w-1.5 h-3 sm:w-2 sm:h-4 bg-primary ml-1 animate-pulse" />
                       )}
                     </p>
                     {streamComplete && (
                       <div className="text-xs text-primary font-medium flex items-center gap-1 pt-2 border-t border-primary/20">
-                        <Sparkles className="w-3 h-3" />
+                        <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                         Powered by Groq AI
                       </div>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-primary text-sm">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="flex items-center gap-2 text-primary text-xs sm:text-sm">
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                     <span>Loading cultural insights...</span>
                   </div>
                 )}
@@ -278,9 +282,9 @@ export function FoodCard({ food, rank }: FoodCardProps) {
           </Card>
         )}
 
-        {/* Debug info in development */}
+        {/* Debug info in development - Hidden on mobile */}
         {process.env.NODE_ENV === 'development' && (
-          <div className="mt-3 p-2 bg-muted/50 rounded-xl text-xs text-muted-foreground">
+          <div className="hidden sm:block mt-3 p-2 bg-muted/50 rounded-xl text-xs text-muted-foreground">
             Raw score: {validScore.toFixed(4)}
           </div>
         )}

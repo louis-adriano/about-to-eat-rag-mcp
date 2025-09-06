@@ -346,25 +346,25 @@ export function AgentChatInterface() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto h-[700px] flex flex-col bg-white rounded-3xl shadow-xl border">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-primary/10 to-secondary/10 rounded-t-3xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary rounded-xl shadow-md">
-            <Bot className="w-6 h-6 text-primary-foreground" />
+    <div className="max-w-4xl mx-auto h-[600px] sm:h-[700px] flex flex-col bg-white rounded-2xl sm:rounded-3xl shadow-xl border">
+      {/* Chat Header - Mobile Optimized */}
+      <div className="flex items-center justify-between p-4 sm:p-6 border-b bg-gradient-to-r from-primary/10 to-secondary/10 rounded-t-2xl sm:rounded-t-3xl">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="p-1.5 sm:p-2 bg-primary rounded-lg sm:rounded-xl shadow-md">
+            <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
           </div>
-          <div>
-            <h3 className="font-serif font-semibold text-foreground">Meet Curate</h3>
-            <p className="text-sm text-muted-foreground">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-serif font-semibold text-foreground text-sm sm:text-base">Meet Curate</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate">
               Your personal culinary curator • {conversationHistory.length > 0 ? `${Math.floor(conversationHistory.length / 2)} exchanges` : 'Ready to chat'}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Memory indicator */}
           {conversationHistory.length > 0 && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground bg-primary/10 px-2 py-1 rounded-full">
+            <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground bg-primary/10 px-2 py-1 rounded-full">
               <Archive className="w-3 h-3" />
               <span>Remembering context</span>
             </div>
@@ -374,66 +374,67 @@ export function AgentChatInterface() {
             onClick={clearChat}
             variant="ghost"
             size="sm"
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground text-xs sm:text-sm p-1 sm:p-2"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Clear Chat
+            <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Clear Chat</span>
           </Button>
         </div>
       </div>
 
-      {/* Messages Area */}
+      {/* Messages Area - Mobile Optimized */}
       <div 
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-transparent to-primary/5"
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4 sm:space-y-6 bg-gradient-to-b from-transparent to-primary/5"
       >
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+            className={`flex gap-2 sm:gap-4 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
           >
-            {/* Avatar */}
-            <div className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center ${
+            {/* Avatar - Mobile Sized */}
+            <div className={`flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center ${
               message.role === 'user' 
                 ? 'bg-secondary text-secondary-foreground' 
                 : 'bg-primary text-primary-foreground'
             }`}>
-              {message.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
+              {message.role === 'user' ? <User className="w-4 h-4 sm:w-5 sm:h-5" /> : <Bot className="w-4 h-4 sm:w-5 sm:h-5" />}
             </div>
 
-            {/* Message Content */}
-            <div className={`max-w-[80%] ${message.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-2`}>
+            {/* Message Content - Mobile Layout */}
+            <div className={`max-w-[80%] ${message.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1 sm:gap-2`}>
               {/* Text Message */}
               {message.content && (
-                <div className={`px-4 py-3 rounded-3xl shadow-sm border ${
+                <div className={`px-3 sm:px-4 py-2 sm:py-3 rounded-2xl sm:rounded-3xl shadow-sm border ${
                   message.role === 'user' 
                     ? 'bg-secondary text-secondary-foreground ml-auto rounded-br-lg' 
                     : 'bg-white text-foreground mr-auto rounded-bl-lg'
                 } ${message.type === 'error' ? 'bg-destructive/10 border-destructive/20 text-destructive' : ''}`}>
-                  <div className="flex items-start gap-2">
+                  <div className="flex items-start gap-1 sm:gap-2">
                     {message.type === 'analysis' && (
-                      <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-primary mt-0.5 flex-shrink-0" />
                     )}
                     {message.type === 'error' && (
-                      <X className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                      <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive mt-0.5 flex-shrink-0" />
                     )}
                     <div className="flex-1">
                       {message.isTyping ? (
                         <div className="flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm text-muted-foreground">Thinking...</span>
+                          <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                          <span className="text-xs sm:text-sm text-muted-foreground">Thinking...</span>
                         </div>
                       ) : (
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                       )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Search Results */}
+              {/* Search Results - Mobile Optimized */}
               {message.searchResults && message.searchResults.length > 0 && (
-                <div className="space-y-4 w-full max-w-2xl">
+                <div className="space-y-3 sm:space-y-4 w-full max-w-2xl">
                   {message.searchResults.slice(0, 3).map((food, index) => (
                     <div key={food.id} className="transform scale-95">
                       <FoodCard food={food} rank={index + 1} />
@@ -441,7 +442,7 @@ export function AgentChatInterface() {
                   ))}
                   {message.searchResults.length > 3 && (
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         + {message.searchResults.length - 3} more results
                       </p>
                     </div>
@@ -449,7 +450,7 @@ export function AgentChatInterface() {
                 </div>
               )}
 
-              {/* Timestamp */}
+              {/* Timestamp - Mobile Text Size */}
               <p className={`text-xs text-muted-foreground ${
                 message.role === 'user' ? 'text-right' : 'text-left'
               }`}>
@@ -464,33 +465,33 @@ export function AgentChatInterface() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggested Prompts (show when chat is empty or after welcome message) */}
+      {/* Suggested Prompts - Mobile Grid */}
       {messages.length <= 1 && (
-        <div className="px-6 py-4 border-t bg-muted/30">
-          <p className="text-sm text-muted-foreground mb-3 font-medium">Try asking:</p>
-          <div className="flex flex-wrap gap-2">
+        <div className="px-3 sm:px-6 py-3 sm:py-4 border-t bg-muted/30">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 font-medium">Try asking:</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {suggestedPrompts.slice(0, 3).map((prompt, index) => (
               <Button
                 key={index}
                 variant="outline"
                 size="sm"
                 onClick={() => setInput(prompt)}
-                className="text-xs bg-white/80 hover:bg-primary/10 hover:border-primary/30 border-border/50"
+                className="text-xs bg-white/80 hover:bg-primary/10 hover:border-primary/30 border-border/50 text-left justify-start h-auto py-2 px-3"
               >
-                {prompt}
+                <span className="truncate">{prompt}</span>
               </Button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Input Area */}
-      <div className="p-6 border-t bg-white rounded-b-3xl">
+      {/* Input Area - Mobile Optimized */}
+      <div className="p-3 sm:p-6 border-t bg-white rounded-b-2xl sm:rounded-b-3xl">
         <form onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
           handleSendMessage(e);
-        }} className="flex gap-3">
+        }} className="flex gap-2 sm:gap-3">
           <div className="flex-1">
             <Input
               value={input}
@@ -498,35 +499,39 @@ export function AgentChatInterface() {
               onKeyPress={handleKeyPress}
               placeholder="Ask Curate about any food or cuisine..."
               disabled={isLoading}
-              className="h-12 bg-muted/30 border-border/50 rounded-2xl px-4 text-sm focus:bg-white transition-colors"
+              className="h-10 sm:h-12 bg-muted/30 border-border/50 rounded-xl sm:rounded-2xl px-3 sm:px-4 text-sm focus:bg-white transition-colors"
             />
           </div>
           <Button
             type="submit"
             disabled={!input.trim() || isLoading}
             size="lg"
-            className="h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90 shadow-md"
+            className="h-10 sm:h-12 px-3 sm:px-6 rounded-xl sm:rounded-2xl bg-primary hover:bg-primary/90 shadow-md"
           >
             {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
             ) : (
-              <Send className="w-5 h-5" />
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
             )}
           </Button>
         </form>
         
-        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground">
+        {/* Feature Icons - Mobile Layout */}
+        <div className="flex items-center justify-center gap-3 sm:gap-4 mt-3 sm:mt-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <ChefHat className="w-3 h-3" />
-            <span>Food Discovery</span>
+            <ChefHat className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            <span className="hidden sm:inline">Food Discovery</span>
+            <span className="sm:hidden">Discovery</span>
           </div>
           <div className="flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            <span>Cultural Insights</span>
+            <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            <span className="hidden sm:inline">Cultural Insights</span>
+            <span className="sm:hidden">Insights</span>
           </div>
           <div className="flex items-center gap-1">
-            <Archive className="w-3 h-3" />
-            <span>Contextual Memory</span>
+            <Archive className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            <span className="hidden sm:inline">Contextual Memory</span>
+            <span className="sm:hidden">Memory</span>
           </div>
         </div>
       </div>
